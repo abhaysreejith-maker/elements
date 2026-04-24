@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="keywords" content="register, vocalize" />
+  <meta name="description" content="Vocalize registration page." />
+  <meta name="author" content="Vocalize" />
+
+  <title>Vocalize | Register</title>
+  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.css" />
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Roboto:400,700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="/static/css/style.css" rel="stylesheet" />
+  <link href="/static/css/responsive.css" rel="stylesheet" />
+</head>
+
+<body class="sub_page">
+  <header class="header_section">
+    <div class="container">
+      <nav class="navbar navbar-expand-lg custom_nav-container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+          <img src="/static/images/logo.png" alt="Vocalize logo">
+          <span>Vocalize</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <div class="d-flex mx-auto flex-column flex-lg-row align-items-center">
+            <ul class="navbar-nav">
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">About</a></li>
+              <li class="nav-item active"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section class="auth-hero">
+    <div class="container">
+      <div class="auth-hero-content">
+        <h1>Join Vocalize</h1>
+        <p>Start your journey to emotion-based music discovery</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-section">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="auth-card">
+            <div class="auth-header">
+              <i class="fas fa-user-plus auth-icon"></i>
+              <h2>Create Your Account</h2>
+              <p class="text-muted">Join thousands of users discovering music that matches their mood</p>
+            </div>
+            {% if message %}
+              <div class="alert alert-info-modern" role="alert">
+                <i class="fas fa-info-circle me-2"></i>{{ message }}
+              </div>
+            {% endif %}
+            <form action="{{ url_for('register') }}" method="post">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-group-modern">
+                    <label for="username" class="form-label-modern">
+                      <i class="fas fa-user me-2"></i>Username
+                    </label>
+                    <input type="text" class="form-control-modern" id="username" name="username" placeholder="Your name" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group-modern">
+                    <label for="age" class="form-label-modern">
+                      <i class="fas fa-birthday-cake me-2"></i>Age
+                    </label>
+                    <input type="number" class="form-control-modern" id="age" name="age" placeholder="Age" required>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group-modern">
+                <label for="email" class="form-label-modern">
+                  <i class="fas fa-envelope me-2"></i>Email Address
+                </label>
+                <input type="email" class="form-control-modern" id="email" name="useremail" placeholder="Your email" required>
+              </div>
+              <div class="form-group-modern">
+                <label class="form-label-modern d-block">
+                  <i class="fas fa-venus-mars me-2"></i>Gender
+                </label>
+                <div class="gender-options">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input-modern" type="radio" name="gender" id="genderMale" value="male" required>
+                    <label class="form-check-label-modern" for="genderMale">Male</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input-modern" type="radio" name="gender" id="genderFemale" value="female" required>
+                    <label class="form-check-label-modern" for="genderFemale">Female</label>
+                  </div>
+                </div>
+              </div>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-group-modern">
+                    <label for="password" class="form-label-modern">
+                      <i class="fas fa-lock me-2"></i>Password
+                    </label>
+                    <input type="password" class="form-control-modern" id="password" name="password" placeholder="Password" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group-modern">
+                    <label for="confirmPassword" class="form-label-modern">
+                      <i class="fas fa-lock me-2"></i>Confirm Password
+                    </label>
+                    <input type="password" class="form-control-modern" id="confirmPassword" name="c_password" placeholder="Confirm password" required>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary-modern w-100 mt-4">
+                <i class="fas fa-rocket me-2"></i>Create Account
+              </button>
+            </form>
+            <div class="auth-footer">
+              <p>Already have an account? <a href="{{ url_for('login') }}" class="auth-link">Sign in here</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
+  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+Flask
+numpy
+pandas
+librosa
+tensorflow
+scikit-learn
+matplotlib
+pyaudio

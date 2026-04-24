@@ -1,0 +1,69 @@
+/* form-style.css */
+
+/* Centering the form container and setting width */
+.form-container {
+    background-color: #f9f9f9;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 600px; /* Maximum width of the form */
+    margin: auto; /* Center the form horizontally */
+  }
+  
+  /* Form input styling */
+  .login-form input[type="text"],
+  .login-form input[type="email"],
+  .login-form input[type="number"],
+  .login-form input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  /* Radio button styling */
+  .login-form input[type="radio"] {
+    margin-right: 5px;
+  }
+  
+  .login-form .form-group {
+    margin-bottom: 15px;
+  }
+  
+  /* Label styling */
+  .login-form label {
+    display: inline-block;
+    margin-right: 15px;
+  }
+  
+  /* Button styling */
+  .login-form button {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .login-form button:hover {
+    background-color: #0056b3;
+  }
+  
+  /* Message styling */
+  .message {
+    text-align: center;
+    margin-top: 10px;
+  }
+  
+  .message a {
+    color: #007bff;
+  }
+  
+  .message a:hover {
+    text-decoration: underline;
+  }
+  

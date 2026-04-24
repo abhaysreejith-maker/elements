@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Multi-Modal Emotion Classification</title>
+
+        <!-- CSS FILES -->                
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+
+        <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+        <link href="/static/css/bootstrap-icons.css" rel="stylesheet">
+
+        <link href="/static/css/templatemo-tiya-golf-club.css" rel="stylesheet">
+        
+<!--
+
+TemplateMo 587 Tiya Golf Club
+
+https://templatemo.com/tm-587-tiya-golf-club
+
+-->
+    </head>
+    
+    <body>
+
+        <main>
+
+            <nav style="background-color: rgb(32, 32, 120);" class="navbar navbar-expand-lg">                
+                <div class="container">
+                    <a class="navbar-brand d-flex align-items-center" href="{{url_for('home')}}">
+                        <img src="/static/images/logo.png" class="navbar-brand-image img-fluid" alt="Tiya Golf Club">
+                        <span class="navbar-brand-text">
+                            Multi-Modal Emotion Classification
+                        </span>
+                    </a>
+
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-lg-auto">
+                            <li class="nav-item">
+                                <a class="nav-link click-scroll" href="{{url_for('home')}}">Home</a>
+                            </li>
+
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarLightDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">Upload</a>
+
+                                <ul class="dropdown-menu dropdown-menu-light" aria-labelledby="navbarLightDropdownMenuLink">
+                                    <li><a class="dropdown-item" href="{{url_for('image')}}">Images</a></li>
+
+                                    <li><a class="dropdown-item" href="{{url_for('audio')}}">Audio</a></li>
+
+                                    <li><a class="dropdown-item" href="{{url_for('text')}}">Text</a></li>
+                                </ul>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link click-scroll" href="{{url_for('index')}}">LogOut</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+
+            <section class="section-bg-image">
+                <svg viewBox="0 0 1265 144" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path fill="rgba(255, 255, 255, 1)" d="M 0 40 C 164 40 164 20 328 20 L 328 20 L 328 0 L 0 0 Z" stroke-width="0"></path> <path fill="rgba(255, 255, 255, 1)" d="M 327 20 C 445.5 20 445.5 89 564 89 L 564 89 L 564 0 L 327 0 Z" stroke-width="0"></path> <path fill="rgba(255, 255, 255, 1)" d="M 563 89 C 724.5 89 724.5 48 886 48 L 886 48 L 886 0 L 563 0 Z" stroke-width="0"></path><path fill="rgba(255, 255, 255, 1)" d="M 885 48 C 1006.5 48 1006.5 67 1128 67 L 1128 67 L 1128 0 L 885 0 Z" stroke-width="0"></path><path fill="rgba(255, 255, 255, 1)" d="M 1127 67 C 1196 67 1196 0 1265 0 L 1265 0 L 1265 0 L 1127 0 Z" stroke-width="0"></path></svg>
+
+                
+                    <div class="container">
+                        <div class="row">
+                            <center>
+                                {% if prediction %}
+                                    <h3 style="color: white;">prediction: {{prediction}}</h3>
+                                    <audio controls>
+                                        <source src="/{{path}}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>                                     
+                                {% endif %}
+                                
+                                <div style="margin-top: 50px;" class="col-lg-6 col-12">
+                                    <div class="section-bg-image-block">
+                                        <h2 class="mb-lg-3">Upload File</h2>
+
+                                        <form action="{{url_for('audio')}}" method="post" class="custom-form mt-lg-4 mt-2" role="form" enctype="multipart/form-data">
+
+                                            <center>
+                                                <input style="width: 400px;" type="file" class="btn btn-primary" accept="audio/*" name="file">
+                                                <button style="margin-left: 0px; margin-top: 30px;" type="submit" class="form-control">Submit</button>
+                                            </center>
+                                            
+                                        </form>
+                                    </div>
+                                </div>
+                            </center>
+
+                        </div>
+                    </div>
+                
+                <svg viewBox="0 0 1265 144" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><path fill="rgba(255, 255, 255, 1)" d="M 0 40 C 164 40 164 20 328 20 L 328 20 L 328 0 L 0 0 Z" stroke-width="0"></path> <path fill="rgba(255, 255, 255, 1)" d="M 327 20 C 445.5 20 445.5 89 564 89 L 564 89 L 564 0 L 327 0 Z" stroke-width="0"></path> <path fill="rgba(255, 255, 255, 1)" d="M 563 89 C 724.5 89 724.5 48 886 48 L 886 48 L 886 0 L 563 0 Z" stroke-width="0"></path><path fill="rgba(255, 255, 255, 1)" d="M 885 48 C 1006.5 48 1006.5 67 1128 67 L 1128 67 L 1128 0 L 885 0 Z" stroke-width="0"></path><path fill="rgba(255, 255, 255, 1)" d="M 1127 67 C 1196 67 1196 0 1265 0 L 1265 0 L 1265 0 L 1127 0 Z" stroke-width="0"></path></svg>
+            </section>
+
+        </main>
+
+        {% if message %}
+            <script>
+                alert("{{ message }}")        
+            </script>
+        {% endif %}
+
+        <script src="/static/js/jquery.min.js"></script>
+        <script src="/static/js/bootstrap.bundle.min.js"></script>
+        <script src="/static/js/jquery.sticky.js"></script>
+        <script src="/static/js/click-scroll.js"></script>
+        <script src="/static/js/animated-headline.js"></script>
+        <script src="/static/js/modernizr.js"></script>
+        <script src="/static/js/custom.js"></script>
+
+    </body>
+</html>

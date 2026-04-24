@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="keywords" content="song recommendation, voice tone analysis" />
+  <meta name="description" content="Vocalize user dashboard for mood-based song recommendations." />
+  <meta name="author" content="Vocalize" />
+
+  <title>Vocalize | Dashboard</title>
+  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.css" />
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Roboto:400,700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="/static/css/style.css" rel="stylesheet" />
+  <link href="/static/css/responsive.css" rel="stylesheet" />
+</head>
+
+<body class="sub_page">
+  <header class="header_section">
+    <div class="container">
+      <nav class="navbar navbar-expand-lg custom_nav-container">
+        <a class="navbar-brand" href="{{ url_for('home') }}">
+          <img src="/static/images/logo.png" alt="Vocalize logo">
+          <span>Vocalize</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <div class="d-flex mx-auto flex-column flex-lg-row align-items-center">
+            <ul class="navbar-nav">
+              <li class="nav-item active"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('upload') }}">Upload</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section class="dashboard-hero">
+    <div class="container">
+      <div class="dashboard-welcome">
+        <h1>Welcome back, {{ logged_in_user }}!</h1>
+        <p>Ready to discover music that matches your current mood?</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-section py-5">
+    <div class="container">
+      <div class="row gy-4 justify-content-center">
+        <div class="col-lg-8">
+          <div class="dashboard-card">
+            <div class="card-header-modern">
+              <h3><i class="fas fa-music me-2"></i>Choose Your Mood Detection Method</h3>
+              <p class="text-muted">Select how you'd like to analyze your current emotional state</p>
+            </div>
+            <div class="row g-4">
+              <div class="col-md-6">
+                <div class="option-card">
+                  <div class="option-icon">
+                    <i class="fas fa-microphone-alt"></i>
+                  </div>
+                  <h4>Voice Analysis</h4>
+                  <p>Upload a short audio recording to detect your emotional tone.</p>
+                  <a class="btn btn-primary-modern mt-3" href="{{ url_for('upload') }}">
+                    <i class="fas fa-upload me-2"></i>Upload Audio
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="option-card">
+                  <div class="option-icon">
+                    <i class="fas fa-camera"></i>
+                  </div>
+                  <h4>Live Camera</h4>
+                  <p>Use your camera for instant mood detection and recommendations.</p>
+                  <a class="btn btn-outline-primary-modern mt-3" href="{{ url_for('upload') }}">
+                    <i class="fas fa-video me-2"></i>Open Camera
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
+  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
+</body>
+</html>

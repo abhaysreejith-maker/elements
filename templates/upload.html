@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="keywords" content="song recommendation, voice tone analysis, mood detection" />
+  <meta name="description" content="Vocalize recommends songs based on voice tone and live camera mood capture." />
+  <meta name="author" content="Vocalize" />
+
+  <title>Vocalize | Upload</title>
+  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.css" />
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Roboto:400,700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="/static/css/style.css" rel="stylesheet" />
+  <link href="/static/css/responsive.css" rel="stylesheet" />
+</head>
+
+<body class="sub_page">
+  <header class="header_section">
+    <div class="container">
+      <nav class="navbar navbar-expand-lg custom_nav-container">
+        <a class="navbar-brand" href="{{ url_for('home') }}">
+          <img src="/static/images/logo.png" alt="Vocalize logo">
+          <span>Vocalize</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <div class="d-flex mx-auto flex-column flex-lg-row align-items-center">
+            <ul class="navbar-nav">
+              <li class="nav-item active"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('upload') }}">Upload</a></li>
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section class="upload-hero">
+    <div class="container">
+      <div class="upload-hero-content">
+        <h1>Analyze Your Mood</h1>
+        <p>Choose your preferred method to detect emotions and get personalized music recommendations</p>
+      </div>
+    </div>
+  </section>
+
+  <main class="upload-section py-5">
+    <div class="container">
+      <div class="section-header text-center mb-5">
+        <h2>Select Your Analysis Method</h2>
+        <p>Upload audio or use live camera capture to discover music that matches your current mood</p>
+      </div>
+
+      <div class="row gy-4 justify-content-center">
+        <div class="col-lg-5">
+          <div class="upload-card">
+            <div class="card-header-modern">
+              <i class="fas fa-microphone-alt card-icon"></i>
+              <h3>Voice Analysis</h3>
+              <p class="text-muted">Upload a short audio file and get mood-based song recommendations instantly.</p>
+            </div>
+            <form id="moodForm" enctype="multipart/form-data" method="POST" action="{{ url_for('upload') }}">
+              <div class="upload-area">
+                <input type="file" class="form-control-file-modern" id="audioInput" name="audio" accept="audio/*" required />
+                <div class="upload-placeholder">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  <p>Choose an audio file or drag it here</p>
+                  <small class="text-muted">Supported formats: MP3, WAV, M4A</small>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary-modern btn-lg w-100">
+                <i class="fas fa-play me-2"></i>Analyze Audio
+              </button>
+            </form>
+            {% if message %}
+              <div class="alert alert-warning-modern mt-4" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>{{ message }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="camera-card-modern">
+            <div class="card-header-modern">
+              <i class="fas fa-camera card-icon"></i>
+              <h3>Live Camera Capture</h3>
+              <p class="text-muted">Center your face and capture a snapshot to receive mood-based recommendations.</p>
+            </div>
+            <div class="camera-controls">
+              <button id="startCamera" type="button" class="btn btn-outline-primary-modern">
+                <i class="fas fa-video me-2"></i>Start Camera
+              </button>
+              <button id="captureEmotion" type="button" class="btn btn-primary-modern" disabled>
+                <i class="fas fa-camera me-2"></i>Capture Mood
+              </button>
+            </div>
+            <div class="camera-container">
+              <video id="video" autoplay playsinline muted></video>
+              <div class="camera-overlay-modern"></div>
+              <div class="camera-guide">
+                <i class="fas fa-user-circle"></i>
+                <span>Position your face here</span>
+              </div>
+            </div>
+            <div id="cameraResult"></div>
+            <div id="cameraRecommendations" class="recommendations-modern d-none"></div>
+            <div class="camera-note">
+              <i class="fas fa-info-circle me-2"></i>
+              <small>Live camera mood capture uses AI analysis. Ensure good lighting and clear facial visibility for best results.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="resultContainer" class="mt-5{% if not prediction %} d-none{% endif %}">
+        {% if prediction %}
+          <div class="result-card">
+            <div class="result-header">
+              <i class="fas fa-music result-icon"></i>
+              <h3>Analysis Complete</h3>
+            </div>
+            <div class="alert alert-success-modern" role="alert">
+              <i class="fas fa-check-circle me-2"></i>
+              <strong>Detected Mood:</strong> {{ prediction }}
+            </div>
+            <div class="audio-player">
+              <audio controls style="width:100%;">
+                <source src="{{ url_for('static', filename='audio/' + path.split('/')[-1]) }}" type="audio/{{ path.split('.')[-1] }}">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+            {% if recommendations %}
+              <div class="recommendations-modern">
+                <h4><i class="fas fa-list-ul me-2"></i>Recommended Songs</h4>
+                {% for song in recommendations %}
+                  <div class="song-item">
+                    <i class="fas fa-music song-icon"></i>
+                    <div class="song-info">
+                      <span class="song-title">{{ song.name }}</span>
+                      <span class="song-artist">by {{ song.artist }}</span>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let cameraStream = null;
+
+    async function startCamera() {
+      const startButton = document.getElementById('startCamera');
+      const captureButton = document.getElementById('captureEmotion');
+      const video = document.getElementById('video');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera access is not supported by your browser.');
+        return;
+      }
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = cameraStream;
+        captureButton.disabled = false;
+        startButton.textContent = 'Camera active';
+        startButton.classList.remove('btn-outline-primary');
+        startButton.classList.add('btn-primary');
+        startButton.disabled = true;
+      } catch (error) {
+        alert('Unable to access the camera. Please allow camera permissions.');
+        console.error(error);
+      }
+    }
+
+    async function captureEmotion() {
+      const video = document.getElementById('video');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 360;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL('image/png');
+
+      const cameraResult = document.getElementById('cameraResult');
+      const cameraRecommendations = document.getElementById('cameraRecommendations');
+      cameraResult.innerHTML = '<div class="alert alert-info">Analyzing your expression…</div>';
+      cameraRecommendations.classList.add('d-none');
+
+      try {
+        const response = await fetch('{{ url_for('camera_emotion') }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ image: imageData })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          cameraResult.innerHTML = `<div class="alert alert-success">Emotion detected: <strong>${result.emotion}</strong> <span class="status-pill">Confidence ${Math.round(result.confidence * 100)}%</span></div>`;
+          if (result.recommendations && result.recommendations.length) {
+            let html = '<h3>Recommended songs</h3>';
+            result.recommendations.forEach(song => {
+              html += `<div class="recommendation-item"><p>${song.name} by <span class="artist">${song.artist}</span></p></div>`;
+            });
+            cameraRecommendations.innerHTML = html;
+            cameraRecommendations.classList.remove('d-none');
+          }
+        } else {
+          cameraResult.innerHTML = `<div class="alert alert-danger">Error: ${result.error || 'Unable to detect emotion.'}</div>`;
+        }
+      } catch (error) {
+        cameraResult.innerHTML = '<div class="alert alert-danger">Error sending image to server.</div>';
+        console.error(error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('startCamera').addEventListener('click', startCamera);
+      document.getElementById('captureEmotion').addEventListener('click', captureEmotion);
+    });
+  </script>
+
+  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
+  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
+</body>
+</html>

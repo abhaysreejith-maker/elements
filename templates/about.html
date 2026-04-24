@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="keywords" content="about vocalize, music recommendation" />
+  <meta name="description" content="Vocalize uses voice tone and live mood capture to recommend music." />
+  <meta name="author" content="Vocalize" />
+
+  <title>Vocalize | About</title>
+  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.css" />
+  <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Roboto:400,700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="/static/css/style.css" rel="stylesheet" />
+  <link href="/static/css/responsive.css" rel="stylesheet" />
+</head>
+
+<body class="sub_page">
+  <header class="header_section">
+    <div class="container">
+      <nav class="navbar navbar-expand-lg custom_nav-container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+          <img src="/static/images/logo.png" alt="Vocalize logo">
+          <span>Vocalize</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <div class="d-flex mx-auto flex-column flex-lg-row align-items-center">
+            <ul class="navbar-nav">
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
+              <li class="nav-item active"><a class="nav-link" href="{{ url_for('about') }}">About</a></li>
+              {% if logged_in_user %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+              {% else %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section class="about-hero">
+    <div class="container">
+      <div class="about-hero-content">
+        <h1>About Vocalize</h1>
+        <p>Revolutionizing music discovery through emotion</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about_section layout_padding">
+    <div class="container">
+      <div class="row gy-4 align-items-center">
+        <div class="col-lg-6">
+          <div class="about-content">
+            <div class="section-badge">Our Mission</div>
+            <h2>Discover Music That Feels Right</h2>
+            <p>Vocalize is an innovative platform that bridges the gap between your emotions and the perfect soundtrack. Using advanced AI technology, we analyze your voice tone or facial expressions to understand your current mood and recommend music that resonates deeply with you.</p>
+            <div class="about-features">
+              <div class="feature-item">
+                <i class="fas fa-brain"></i>
+                <span>AI-Powered Analysis</span>
+              </div>
+              <div class="feature-item">
+                <i class="fas fa-heart"></i>
+                <span>Emotion-Based Recommendations</span>
+              </div>
+              <div class="feature-item">
+                <i class="fas fa-shield-alt"></i>
+                <span>Privacy-First Approach</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="about-image">
+            <img src="/static/images/slider-img.jpg" alt="Mood capture illustration">
+            <div class="image-overlay">
+              <div class="stats">
+                <div class="stat">
+                  <div class="stat-number">95%</div>
+                  <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-number">10K+</div>
+                  <div class="stat-label">Songs</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-number">24/7</div>
+                  <div class="stat-label">Available</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
+  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
+</body>
+</html>
