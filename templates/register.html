@@ -3,101 +3,55 @@
 {% block title %}Register{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-md w-full space-y-8">
-    <div>
-      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-        Create your account
-      </h2>
-      <p class="mt-2 text-center text-sm text-gray-600">
-        Or
-        <a href="{{ url_for('login') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
-          sign in to your existing account
-        </a>
-      </p>
+<section class="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-lg">
+    <div class="text-center">
+        <h1 class="title-font text-3xl font-bold text-slate-900">Create Your Account</h1>
+        <p class="mt-2 text-sm text-slate-600">Already registered? <a href="{{ url_for('login') }}" class="font-semibold text-teal-700 hover:text-teal-600">Sign in</a></p>
     </div>
+
     {% if message %}
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-      <span class="block sm:inline">{{ message }}</span>
-    </div>
+    <div class="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ message }}</div>
     {% endif %}
-    <form class="mt-8 space-y-6" action="{{ url_for('register') }}" method="POST">
-      <div class="rounded-md shadow-sm -space-y-px">
-        <div>
-          <label for="username" class="sr-only">Username</label>
-          <input id="username" name="username" type="text" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Username">
-        </div>
-        <div>
-          <label for="email-address" class="sr-only">Email address</label>
-          <input id="email-address" name="useremail" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email address">
-        </div>
-        <div>
-          <label for="password" class="sr-only">Password</label>
-          <input id="password" name="password" type="password" autocomplete="new-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Password">
-        </div>
-        <div>
-          <label for="confirm-password" class="sr-only">Confirm Password</label>
-          <input id="confirm-password" name="cpassword" type="password" autocomplete="new-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Confirm Password">
-        </div>
-      </div>
 
-      <div>
-        <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-          <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-            <!-- Heroicon name: solid/lock-closed -->
-            <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-            </svg>
-          </span>
-          Sign up
-        </button>
-      </div>
+    <form class="mt-6 grid gap-4 sm:grid-cols-2" action="{{ url_for('register') }}" method="POST">
+        <div class="sm:col-span-2">
+            <label for="username" class="mb-1.5 block text-sm font-semibold text-slate-700">Username</label>
+            <input id="username" name="username" type="text" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100" placeholder="Your name">
+        </div>
+
+        <div class="sm:col-span-2">
+            <label for="email-address" class="mb-1.5 block text-sm font-semibold text-slate-700">Email address</label>
+            <input id="email-address" name="useremail" type="email" autocomplete="email" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100" placeholder="you@example.com">
+        </div>
+
+        <div>
+            <label for="age" class="mb-1.5 block text-sm font-semibold text-slate-700">Age</label>
+            <input id="age" name="age" type="number" min="1" max="120" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100" placeholder="21">
+        </div>
+
+        <div>
+            <label for="gender" class="mb-1.5 block text-sm font-semibold text-slate-700">Gender</label>
+            <select id="gender" name="gender" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100">
+                <option value="" selected disabled>Select gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="password" class="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100" placeholder="Create password">
+        </div>
+
+        <div>
+            <label for="confirm-password" class="mb-1.5 block text-sm font-semibold text-slate-700">Confirm password</label>
+            <input id="confirm-password" name="c_password" type="password" autocomplete="new-password" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100" placeholder="Re-enter password">
+        </div>
+
+        <div class="sm:col-span-2">
+            <button type="submit" class="w-full rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-600">Create Account</button>
+        </div>
     </form>
-  </div>
-</div>
+</section>
 {% endblock %}
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input-modern" type="radio" name="gender" id="genderMale" value="male" required>
-                    <label class="form-check-label-modern" for="genderMale">Male</label>
-                  </div>
-                  <div class="form-check form-check-inline">
-                    <input class="form-check-input-modern" type="radio" name="gender" id="genderFemale" value="female" required>
-                    <label class="form-check-label-modern" for="genderFemale">Female</label>
-                  </div>
-                </div>
-              </div>
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="form-group-modern">
-                    <label for="password" class="form-label-modern">
-                      <i class="fas fa-lock me-2"></i>Password
-                    </label>
-                    <input type="password" class="form-control-modern" id="password" name="password" placeholder="Password" required>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-group-modern">
-                    <label for="confirmPassword" class="form-label-modern">
-                      <i class="fas fa-lock me-2"></i>Confirm Password
-                    </label>
-                    <input type="password" class="form-control-modern" id="confirmPassword" name="c_password" placeholder="Confirm password" required>
-                  </div>
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary-modern w-100 mt-4">
-                <i class="fas fa-rocket me-2"></i>Create Account
-              </button>
-            </form>
-            <div class="auth-footer">
-              <p>Already have an account? <a href="{{ url_for('login') }}" class="auth-link">Sign in here</a></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
-  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
-</body>
-</html>

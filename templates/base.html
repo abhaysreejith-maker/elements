@@ -35,7 +35,7 @@
 <body>
     <nav class="sticky top-0 z-50 border-b border-white/60 bg-white/75 backdrop-blur-lg">
         <div class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <a href="{{ url_for('home') }}" class="title-font text-2xl font-bold tracking-tight text-slate-900">
+            <a href="{{ url_for('home') if logged_in_user else url_for('index') }}" class="title-font text-2xl font-bold tracking-tight text-slate-900">
                 Mood<span class="text-teal-700">Rec</span>
             </a>
             <div class="flex items-center gap-2 sm:gap-3">

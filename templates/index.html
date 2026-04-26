@@ -1,130 +1,29 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <meta name="keywords" content="song recommendation, voice tone analysis, mood detection" />
-  <meta name="description" content="Vocalize recommends songs based on voice tone and live camera mood capture." />
-  <meta name="author" content="Vocalize" />
+{% block title %}Home{% endblock %}
 
-  <title>Vocalize | Mood-driven Song Recommendations</title>
-  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.css" />
-  <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Roboto:400,700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link href="/static/css/style.css" rel="stylesheet" />
-  <link href="/static/css/responsive.css" rel="stylesheet" />
-</head>
-
-<body>
-  <header class="header_section">
-    <div class="container">
-      <nav class="navbar navbar-expand-lg custom_nav-container">
-        <a class="navbar-brand" href="{{ url_for('index') }}">
-          <img src="/static/images/logo.png" alt="Vocalize logo">
-          <span>Vocalize</span>
-        </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-          aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <div class="d-flex mx-auto flex-column flex-lg-row align-items-center">
-            <ul class="navbar-nav">
-              <li class="nav-item active"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
-              <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">About</a></li>
-              {% if logged_in_user %}
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
-              {% else %}
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-              {% endif %}
-            </ul>
-          </div>
+{% block content %}
+<section class="grid items-center gap-8 rounded-3xl border border-white/70 bg-white/85 p-8 shadow-xl lg:grid-cols-2 lg:p-12">
+    <div>
+        <p class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-800">Mood-Aware Music Engine</p>
+        <h1 class="title-font mt-4 text-4xl font-bold leading-tight text-slate-900 sm:text-5xl">Feel it. Detect it. Play it.</h1>
+        <p class="mt-4 max-w-xl text-slate-600">MusicRec detects your emotion using camera landmarks or voice analysis, then surfaces songs that match your current vibe in real time.</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+            {% if logged_in_user %}
+            <a href="{{ url_for('home') }}" class="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Open Dashboard</a>
+            {% else %}
+            <a href="{{ url_for('register') }}" class="rounded-full bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-600">Create Account</a>
+            <a href="{{ url_for('login') }}" class="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Sign In</a>
+            {% endif %}
         </div>
-      </nav>
     </div>
-  </header>
-
-  <section class="hero_section">
-    <div class="container">
-      <div class="row align-items-center gy-5">
-        <div class="col-lg-6">
-          <div class="hero-content">
-            <h1 class="hero-title">Discover Music That Matches Your Mood</h1>
-            <p class="hero-subtitle">Vocalize analyzes your voice tone or captures a live mood snapshot to recommend songs that resonate with your emotions.</p>
-            <div class="hero-buttons">
-              <a class="btn btn-primary btn-lg me-3" href="{{ url_for('register') }}">
-                <i class="fas fa-rocket me-2"></i>Get Started
-              </a>
-              <a class="btn btn-outline-light btn-lg" href="{{ url_for('login') }}">
-                <i class="fas fa-sign-in-alt me-2"></i>Sign In
-              </a>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-6 text-center">
-          <div class="hero-image">
-            <img src="/static/images/slider-img.jpg" class="img-fluid rounded-4 shadow-lg" alt="Mood music illustration">
-            <div class="floating-elements">
-              <div class="floating-note note-1"><i class="fas fa-music"></i></div>
-              <div class="floating-note note-2"><i class="fas fa-headphones"></i></div>
-              <div class="floating-note note-3"><i class="fas fa-microphone"></i></div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-6 text-slate-100 shadow-lg">
+        <h2 class="title-font text-2xl font-semibold">Flow Preview</h2>
+        <ul class="mt-4 space-y-3 text-sm">
+            <li class="rounded-xl bg-white/10 px-4 py-3">1. Login or use demo access</li>
+            <li class="rounded-xl bg-white/10 px-4 py-3">2. Start camera or upload audio</li>
+            <li class="rounded-xl bg-white/10 px-4 py-3">3. Watch live mood + recommendations</li>
+        </ul>
     </div>
-  </section>
-
-      <div class="row mt-5 gy-4">
-        <div class="col-md-4">
-          <div class="feature-card-modern">
-            <div class="feature-icon">
-              <i class="fas fa-microphone-alt"></i>
-            </div>
-            <h4>Voice Analysis</h4>
-            <p>Upload your voice recording and let our AI detect your emotional tone to suggest the perfect playlist.</p>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="feature-card-modern">
-            <div class="feature-icon">
-              <i class="fas fa-camera"></i>
-            </div>
-            <h4>Live Camera Capture</h4>
-            <p>Use your camera for instant mood detection. Just smile, frown, or show any expression!</p>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="feature-card-modern">
-            <div class="feature-icon">
-              <i class="fas fa-music"></i>
-            </div>
-            <h4>Personalized Recommendations</h4>
-            <p>Get curated song suggestions that match your current emotional state and preferences.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="cta_section">
-    <div class="container">
-      <div class="cta-content">
-        <h2>Ready to Find Your Perfect Playlist?</h2>
-        <p>Join thousands of users discovering music that truly understands them.</p>
-        <a class="btn btn-light btn-lg" href="{{ url_for('register') }}">
-          <i class="fas fa-play me-2"></i>Start Your Musical Journey
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
-  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
-</body>
-</html>
+</section>
+{% endblock %}

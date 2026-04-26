@@ -3,108 +3,131 @@
 {% block title %}Upload{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="text-center">
-        <h1 class="text-4xl font-bold text-gray-800">Analyze Your Mood</h1>
-        <p class="mt-2 text-lg text-gray-600">Choose your preferred method to detect emotions and get personalized music recommendations</p>
-    </div>
-
-    <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Voice Analysis Card -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="text-3xl text-indigo-500"><i class="fas fa-microphone-alt"></i></div>
-                    <h3 class="ml-4 text-2xl font-semibold text-gray-800">Voice Analysis</h3>
-                </div>
-                <p class="mt-2 text-gray-600">Upload a short audio file and get mood-based song recommendations instantly.</p>
-            </div>
-            <div class="p-6">
-                <form id="moodForm" enctype="multipart/form-data" method="POST" action="{{ url_for('upload') }}">
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div class="space-y-1 text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="audioInput" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                                    <span>Upload a file</span>
-                                    <input id="audioInput" name="audio" type="file" class="sr-only" accept="audio/*" required>
-                                </label>
-                                <p class="pl-1">or drag and drop</p>
-                            </div>
-                            <p class="text-xs text-gray-500">
-                                MP3, WAV, M4A up to 10MB
-                            </p>
-                        </div>
-                    </div>
-                    <button type="submit" class="mt-6 w-full inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <i class="fas fa-play mr-2"></i>Analyze Audio
-                    </button>
-                </form>
-                {% if message %}
-                <div class="mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
-                    <p>{{ message }}</p>
-                </div>
-                {% endif %}
-            </div>
+<section class="rounded-3xl border border-white/70 bg-white/85 p-6 shadow-xl sm:p-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-800">Live Mood Studio</p>
+            <h1 class="title-font mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">Analyze Your Mood</h1>
+            <p class="mt-2 max-w-2xl text-slate-600">Use voice or live camera tracking to detect emotion and update recommendations continuously.</p>
         </div>
-
-        <!-- Live Camera Capture Card -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="text-3xl text-indigo-500"><i class="fas fa-camera"></i></div>
-                    <h3 class="ml-4 text-2xl font-semibold text-gray-800">Live Camera Capture</h3>
-                </div>
-                <p class="mt-2 text-gray-600">Center your face for live mood detection and recommendations.</p>
-            </div>
-            <div class="p-6">
-                <div class="camera-controls flex flex-col items-center">
-                    <button id="startCamera" type="button" class="w-full inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <i class="fas fa-video mr-2"></i>Start Camera
-                    </button>
-                    <div id="camera-container" class="mt-4 w-full bg-gray-200 rounded-lg overflow-hidden" style="display: none; position: relative;">
-                        <video id="camera-feed" class="w-full" autoplay playsinline style="display: block;"></video>
-                        <canvas id="overlay-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
-                        <div id="mood-display" class="absolute top-0 left-0 p-4 bg-black bg-opacity-50 text-white font-bold text-lg rounded-br-lg" style="z-index: 20;"></div>
-                        <div id="mood-stats" class="absolute top-16 left-0 p-3 bg-black bg-opacity-70 text-white text-sm rounded-br-lg font-mono" style="z-index: 20; display: none;"></div>
-                    </div>
-                    <div id="recommendations-container" class="mt-4 w-full bg-white rounded-lg shadow-md p-4" style="display: none;">
-                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Recommended Songs</h3>
-                        <div id="recommendations-list" class="space-y-2"></div>
-                    </div>
-                </div>
-            </div>
+        <div class="grid grid-cols-2 gap-2 text-xs sm:text-sm">
+            <span id="chip-camera" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Camera: Idle</span>
+            <span id="chip-face" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Face: Waiting</span>
+            <span id="chip-mood" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Mood: Neutral</span>
+            <span id="chip-stream" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Network: Ready</span>
         </div>
     </div>
-</div>
-<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+    <div class="mt-8 grid gap-6 lg:grid-cols-2">
+        <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="title-font text-2xl font-semibold text-slate-900">Voice Analysis</h2>
+            <p class="mt-2 text-sm text-slate-600">Upload audio for quick mood classification.</p>
+
+            <form id="moodForm" class="mt-5" enctype="multipart/form-data" method="POST" action="{{ url_for('upload') }}">
+                <label for="audioInput" class="block cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-teal-500 hover:bg-teal-50">
+                    <span class="block text-sm font-semibold text-slate-700">Drop audio or click to browse</span>
+                    <span class="mt-1 block text-xs text-slate-500">MP3, WAV, OGG, FLAC</span>
+                    <input id="audioInput" name="audio" type="file" class="sr-only" accept="audio/*" required>
+                </label>
+                <button type="submit" class="mt-4 w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400">Analyze Audio</button>
+            </form>
+
+            {% if message %}
+            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">{{ message }}</div>
+            {% endif %}
+
+            {% if prediction %}
+            <div class="mt-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">Detected mood: <strong>{{ prediction }}</strong></div>
+            {% endif %}
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="title-font text-2xl font-semibold text-slate-900">Live Camera Capture</h2>
+            <p class="mt-2 text-sm text-slate-600">Real-time facial landmarks, mood label, and recommendation refresh.</p>
+
+            <button id="startCamera" type="button" class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Start Camera</button>
+
+            <div id="camera-container" class="mt-4 hidden overflow-hidden rounded-2xl border border-slate-200 bg-slate-900" style="position: relative;">
+                <video id="camera-feed" class="w-full" autoplay playsinline style="display: block;"></video>
+                <canvas id="overlay-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
+                <div id="mood-display" class="absolute left-3 top-3 rounded-xl bg-black/55 px-3 py-2 text-sm font-bold text-white" style="z-index: 20;">Mood: Neutral</div>
+                <div id="mood-stats" class="absolute left-3 top-16 rounded-xl bg-black/60 px-3 py-2 text-xs font-semibold text-white" style="z-index: 20;">Frames: 0</div>
+            </div>
+
+            <div class="mt-4">
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Mood Timeline</p>
+                <div id="mood-timeline" class="flex min-h-[34px] flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2"></div>
+            </div>
+        </article>
+    </div>
+
+    <section id="recommendations-container" class="mt-6 hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-3">
+            <h3 class="title-font text-2xl font-semibold text-slate-900">Recommended Songs</h3>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Updates every 3s while camera is live</p>
+        </div>
+        <div id="recommendations-list" class="mt-4 grid gap-3 sm:grid-cols-2"></div>
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 <script>
-// ============ MOOD TRACKER OVERLAY SYSTEM ============
-
-// Global state
 const appState = {
     currentMood: 'neutral',
     moodHistory: [],
+    moodBuffer: [],
+    backendMoodBuffer: [],
+    lastBackendMoodAt: 0,
+    lastRecommendationMood: 'neutral',
+    lastRecommendationAt: 0,
     frameCount: 0,
     animationTime: 0,
     landmarks: null,
-    faceMesh: null,
-    camera: null
+    camera: null,
+    streamTimer: null
 };
 
 const moodColors = {
-    happy: { primary: '#00ff41', secondary: '#39ff14', glow: 'rgba(57, 255, 20, 0.6)' },
-    sad: { primary: '#a78bfa', secondary: '#c4b5fd', glow: 'rgba(196, 181, 253, 0.6)' },
-    angry: { primary: '#ff4757', secondary: '#ff6b7a', glow: 'rgba(255, 107, 122, 0.6)' },
-    neutral: { primary: '#ffd700', secondary: '#ffed4e', glow: 'rgba(255, 237, 78, 0.6)' },
-    surprised: { primary: '#00d4ff', secondary: '#5ffbf1', glow: 'rgba(95, 251, 241, 0.6)' },
-    fearful: { primary: '#ff006e', secondary: '#ff4081', glow: 'rgba(255, 64, 129, 0.6)' }
+    happy: { primary: '#16a34a', glow: 'rgba(22, 163, 74, 0.4)' },
+    sad: { primary: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.4)' },
+    angry: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' },
+    disgust: { primary: '#7c3aed', glow: 'rgba(124, 58, 237, 0.4)' },
+    neutral: { primary: '#eab308', glow: 'rgba(234, 179, 8, 0.4)' },
+    surprised: { primary: '#06b6d4', glow: 'rgba(6, 182, 212, 0.4)' },
+    fearful: { primary: '#ec4899', glow: 'rgba(236, 72, 153, 0.4)' }
 };
+
+const chipCamera = document.getElementById('chip-camera');
+const chipFace = document.getElementById('chip-face');
+const chipMood = document.getElementById('chip-mood');
+const chipStream = document.getElementById('chip-stream');
+
+function setChip(chip, text, active = false) {
+    chip.textContent = text;
+    chip.className = `rounded-full px-3 py-1 font-semibold ${active ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600'}`;
+}
+
+function normalizeMood(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    const moodMap = {
+        fear: 'fearful',
+        fearful: 'fearful',
+        surprise: 'surprised',
+        surprised: 'surprised',
+        happiness: 'happy',
+        happy: 'happy',
+        sadness: 'sad',
+        sad: 'sad',
+        anger: 'angry',
+        angry: 'angry',
+        disgust: 'disgust',
+        neutral: 'neutral'
+    };
+    return moodMap[raw] || 'neutral';
+}
 
 class MoodTrackerOverlay {
     constructor() {
@@ -113,528 +136,276 @@ class MoodTrackerOverlay {
         this.video = document.getElementById('camera-feed');
         this.moodDisplay = document.getElementById('mood-display');
         this.moodStats = document.getElementById('mood-stats');
-        
-        console.log('Initializing MoodTrackerOverlay...');
-        
+        this.timeline = document.getElementById('mood-timeline');
+
         this.faceMesh = new FaceMesh({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
         });
-        
+
         this.faceMesh.setOptions({
             maxNumFaces: 1,
             refineLandmarks: true,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
-        
+
         this.faceMesh.onResults(this.onResults.bind(this));
-        appState.faceMesh = this.faceMesh;
-        
-        console.log('FaceMesh initialized successfully');
     }
-    
-    // Calculate eye openness (0-1)
+
+    calculateFaceScale(landmarks) {
+        const left = landmarks[33];
+        const right = landmarks[263];
+        return Math.max(Math.hypot(right.x - left.x, right.y - left.y), 0.001);
+    }
+
     calculateEyeOpenness(landmarks, eyeIndices) {
         const vertical = Math.hypot(
-            landmarks[eyeIndices[1]][0] - landmarks[eyeIndices[5]][0],
-            landmarks[eyeIndices[1]][1] - landmarks[eyeIndices[5]][1]
+            landmarks[eyeIndices[1]].x - landmarks[eyeIndices[5]].x,
+            landmarks[eyeIndices[1]].y - landmarks[eyeIndices[5]].y
         );
         const horizontal = Math.hypot(
-            landmarks[eyeIndices[0]][0] - landmarks[eyeIndices[3]][0],
-            landmarks[eyeIndices[0]][1] - landmarks[eyeIndices[3]][1]
+            landmarks[eyeIndices[0]].x - landmarks[eyeIndices[3]].x,
+            landmarks[eyeIndices[0]].y - landmarks[eyeIndices[3]].y
         );
-        return (vertical / horizontal) * 2; // Normalize
+        return vertical / Math.max(horizontal, 0.001);
     }
-    
-    // Calculate mouth openness (0-1)
+
     calculateMouthOpenness(landmarks) {
         const mouthTop = landmarks[13];
         const mouthBottom = landmarks[14];
-        const vertical = Math.hypot(
-            mouthBottom[0] - mouthTop[0],
-            mouthBottom[1] - mouthTop[1]
-        );
-        return Math.min(vertical * 2, 1);
+        const faceScale = this.calculateFaceScale(landmarks);
+        const vertical = Math.hypot(mouthBottom.x - mouthTop.x, mouthBottom.y - mouthTop.y);
+        return vertical / faceScale;
     }
-    
-    // Calculate eyebrow raise (0-1)
+
     calculateEyebrowRaise(landmarks) {
-        const leftEyebrow = landmarks[105];
-        const rightEyebrow = landmarks[334];
-        const leftEye = landmarks[159];
-        const rightEye = landmarks[386];
-        
-        const leftRaise = Math.max(0, (leftEye[1] - leftEyebrow[1]) / 30);
-        const rightRaise = Math.max(0, (rightEye[1] - rightEyebrow[1]) / 30);
-        
+        const faceScale = this.calculateFaceScale(landmarks);
+        const leftRaise = Math.max(0, (landmarks[159].y - landmarks[105].y) / faceScale);
+        const rightRaise = Math.max(0, (landmarks[386].y - landmarks[334].y) / faceScale);
         return (leftRaise + rightRaise) / 2;
     }
-    
-    // Infer mood from facial features
-    inferMood(landmarks) {
-        const leftEyeOpenness = this.calculateEyeOpenness(landmarks, [33, 133, 33, 133, 159, 145]);
-        const rightEyeOpenness = this.calculateEyeOpenness(landmarks, [362, 263, 362, 263, 386, 374]);
-        const mouthOpenness = this.calculateMouthOpenness(landmarks);
-        const eyebrowRaise = this.calculateEyebrowRaise(landmarks);
-        
-        const eyeOpenness = (leftEyeOpenness + rightEyeOpenness) / 2;
-        
-        // Mood inference logic
-        if (eyebrowRaise > 0.6 && eyeOpenness > 0.4) {
-            return 'surprised';
-        } else if (mouthOpenness > 0.3 && eyeOpenness > 0.5) {
-            return 'happy';
-        } else if (eyeOpenness < 0.3 && mouthOpenness < 0.2) {
-            return 'sad';
-        } else if (eyebrowRaise < 0.2 && mouthOpenness < 0.15) {
-            return 'angry';
-        } else if (eyeOpenness < 0.2) {
-            return 'fearful';
+
+    stabilizeMood(nextMood) {
+        appState.moodBuffer.push(nextMood);
+        if (appState.moodBuffer.length > 8) {
+            appState.moodBuffer.shift();
         }
-        
-        return 'neutral';
+
+        const counts = appState.moodBuffer.reduce((acc, mood) => {
+            acc[mood] = (acc[mood] || 0) + 1;
+            return acc;
+        }, {});
+
+        return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || nextMood;
     }
-    
+
     onResults(results) {
         if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.moodDisplay.innerHTML = '<i class="fas fa-face-meh mr-2"></i>No face detected';
+            this.moodDisplay.textContent = 'No face detected';
+            setChip(chipFace, 'Face: Not detected', false);
             appState.currentMood = 'neutral';
-            appState.landmarks = null;
+            appState.moodBuffer = [];
             return;
         }
-        
+
         const landmarks = results.multiFaceLandmarks[0];
         appState.landmarks = landmarks;
-        
-        const newMood = this.inferMood(landmarks);
-        appState.currentMood = newMood;
-        appState.moodHistory.push(newMood);
-        if (appState.moodHistory.length > 30) appState.moodHistory.shift();
-        
-        console.log('Detected Mood:', newMood, 'Landmarks:', landmarks.length);
-        
-        this.drawOverlay(landmarks);
-        appState.frameCount++;
+        if ((Date.now() - appState.lastBackendMoodAt) > 7000) {
+            appState.currentMood = 'neutral';
+        }
+        appState.moodHistory.push(appState.currentMood);
+        if (appState.moodHistory.length > 36) appState.moodHistory.shift();
+        appState.frameCount += 1;
         appState.animationTime += 0.016;
+
+        setChip(chipFace, 'Face: Detected', true);
+        this.drawOverlay(landmarks);
     }
-    
-    drawOverlay(landmarks) {
-        const width = this.canvas.width;
-        const height = this.canvas.height;
-        
-        this.ctx.clearRect(0, 0, width, height);
-        
-        const colors = moodColors[appState.currentMood];
-        
-        // Draw eyes
-        this.drawEyes(landmarks, colors);
-        
-        // Draw eyebrows
-        this.drawEyebrows(landmarks, colors);
-        
-        // Draw mouth/lips
-        this.drawMouth(landmarks, colors);
-        
-        // Draw nose point
-        this.drawNosePoint(landmarks, colors);
-        
-        // Update mood display
-        this.updateMoodDisplay(colors);
-    }
-    
-    drawEyes(landmarks, colors) {
-        const leftEyeIndices = [362, 382, 381, 380, 374, 373, 390, 249, 390, 373, 374, 380, 381, 382];
-        const rightEyeIndices = [33, 7, 163, 144, 145, 153, 154, 155, 133, 155, 154, 153, 145, 144];
-        
-        // Draw eyes with cyan color and glow
-        [leftEyeIndices, rightEyeIndices].forEach(indices => {
-            this.ctx.fillStyle = colors.primary;
-            this.ctx.globalAlpha = 0.2;
-            this.ctx.beginPath();
-            
-            for (let i = 0; i < indices.length; i++) {
-                const p = landmarks[indices[i]];
-                const x = p[0] * this.canvas.width;
-                const y = p[1] * this.canvas.height;
-                
-                if (i === 0) {
-                    this.ctx.moveTo(x, y);
-                } else {
-                    this.ctx.lineTo(x, y);
-                }
-            }
-            
-            this.ctx.closePath();
+
+    drawPath(landmarks, indices, fillColor, strokeColor) {
+        this.ctx.beginPath();
+        indices.forEach((idx, i) => {
+            const x = landmarks[idx].x * this.canvas.width;
+            const y = landmarks[idx].y * this.canvas.height;
+            if (i === 0) this.ctx.moveTo(x, y);
+            else this.ctx.lineTo(x, y);
+        });
+        this.ctx.closePath();
+        if (fillColor) {
+            this.ctx.fillStyle = fillColor;
             this.ctx.fill();
-            
-            // Eye outline
-            this.ctx.globalAlpha = 1;
-            this.ctx.strokeStyle = colors.primary;
+        }
+        if (strokeColor) {
+            this.ctx.strokeStyle = strokeColor;
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
-        });
-        
-        // Draw animated eye pupils
-        const leftPupil = landmarks[468];
-        const rightPupil = landmarks[469];
-        
-        const pulseAmount = Math.sin(appState.animationTime * 3) * 0.5 + 0.5;
-        const pupilRadius = 4 + pulseAmount * 2;
-        
-        [leftPupil, rightPupil].forEach(pupil => {
-            const x = pupil[0] * this.canvas.width;
-            const y = pupil[1] * this.canvas.height;
-            
-            this.ctx.fillStyle = colors.secondary;
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, pupilRadius, 0, Math.PI * 2);
-            this.ctx.fill();
-            
-            // Pupil glow
-            this.ctx.strokeStyle = colors.glow;
-            this.ctx.lineWidth = 1;
-            this.ctx.stroke();
-        });
-    }
-    
-    drawEyebrows(landmarks, colors) {
-        const leftBrowIndices = [70, 63, 105, 66, 107];
-        const rightBrowIndices = [336, 296, 334, 293, 300];
-        
-        [leftBrowIndices, rightBrowIndices].forEach(indices => {
-            this.ctx.strokeStyle = colors.secondary;
-            this.ctx.lineWidth = 3;
-            this.ctx.lineCap = 'round';
-            this.ctx.lineJoin = 'round';
-            this.ctx.beginPath();
-            
-            for (let i = 0; i < indices.length; i++) {
-                const p = landmarks[indices[i]];
-                const x = p[0] * this.canvas.width;
-                const y = p[1] * this.canvas.height;
-                
-                if (i === 0) {
-                    this.ctx.moveTo(x, y);
-                } else {
-                    this.ctx.lineTo(x, y);
-                }
-            }
-            
-            this.ctx.stroke();
-        });
-    }
-    
-    drawMouth(landmarks, colors) {
-        const mouthIndices = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 375, 321, 405];
-        
-        this.ctx.fillStyle = colors.glow;
-        this.ctx.globalAlpha = 0.3;
-        this.ctx.beginPath();
-        
-        for (let i = 0; i < mouthIndices.length; i++) {
-            const p = landmarks[mouthIndices[i]];
-            const x = p[0] * this.canvas.width;
-            const y = p[1] * this.canvas.height;
-            
-            if (i === 0) {
-                this.ctx.moveTo(x, y);
-            } else {
-                this.ctx.lineTo(x, y);
-            }
         }
-        
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Mouth outline
-        this.ctx.globalAlpha = 1;
-        this.ctx.strokeStyle = colors.primary;
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
     }
-    
-    drawNosePoint(landmarks, colors) {
+
+    drawOverlay(landmarks) {
+        const colors = moodColors[appState.currentMood] || moodColors.neutral;
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.drawPath(landmarks, [33, 7, 163, 144, 145, 153, 154, 155], 'rgba(255,255,255,0.1)', colors.primary);
+        this.drawPath(landmarks, [362, 382, 381, 380, 374, 373, 390, 249], 'rgba(255,255,255,0.1)', colors.primary);
+        this.drawPath(landmarks, [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291], colors.glow, colors.primary);
+
         const nose = landmarks[1];
-        const x = nose[0] * this.canvas.width;
-        const y = nose[1] * this.canvas.height;
-        
-        const pulseAmount = Math.sin(appState.animationTime * 2) * 0.5 + 0.5;
-        const radius = 6 + pulseAmount * 3;
-        
-        // Main point
-        this.ctx.fillStyle = colors.primary;
+        const x = nose.x * this.canvas.width;
+        const y = nose.y * this.canvas.height;
+        const radius = 4 + (Math.sin(appState.animationTime * 2) + 1.2);
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        this.ctx.fillStyle = colors.primary;
         this.ctx.fill();
-        
-        // Glow ring
-        this.ctx.strokeStyle = colors.glow;
-        this.ctx.lineWidth = 3;
-        this.ctx.stroke();
+
+        this.updateMoodDisplay(colors);
     }
-    
+
+    stabilizeBackendMood(nextMood) {
+        appState.backendMoodBuffer.push(nextMood);
+        if (appState.backendMoodBuffer.length > 5) {
+            appState.backendMoodBuffer.shift();
+        }
+
+        const counts = appState.backendMoodBuffer.reduce((acc, mood) => {
+            acc[mood] = (acc[mood] || 0) + 1;
+            return acc;
+        }, {});
+
+        return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || nextMood;
+    }
+
     updateMoodDisplay(colors) {
-        const moodEmojis = {
-            happy: '😊',
-            sad: '😢',
-            angry: '😠',
-            neutral: '😐',
-            surprised: '😲',
-            fearful: '😨'
-        };
-        
         const moodLabel = appState.currentMood.charAt(0).toUpperCase() + appState.currentMood.slice(1);
-        this.moodDisplay.innerHTML = `<i class="fas fa-smile mr-2" style="color: ${colors.primary};"></i>Mood: ${moodLabel} ${moodEmojis[appState.currentMood]}`;
+        this.moodDisplay.textContent = `Mood: ${moodLabel}`;
         this.moodDisplay.style.color = colors.primary;
-        this.moodDisplay.style.textShadow = `0 0 10px ${colors.primary}`;
-        
-        this.moodStats.style.display = 'block';
-        this.moodStats.innerHTML = `Mood: ${moodLabel}<br>Frames: ${appState.frameCount}`;
+        this.moodDisplay.style.textShadow = `0 0 8px ${colors.glow}`;
+        this.moodStats.textContent = `Frames: ${appState.frameCount}`;
+
+        setChip(chipMood, `Mood: ${moodLabel}`, true);
+        this.renderTimeline();
     }
-    
+
+    renderTimeline() {
+        this.timeline.innerHTML = appState.moodHistory.slice(-24).map((mood) => {
+            const c = moodColors[mood] || moodColors.neutral;
+            return `<span title="${mood}" style="background:${c.primary}" class="inline-block h-4 w-2 rounded-sm"></span>`;
+        }).join('');
+    }
+
     resizeCanvas() {
         const rect = this.canvas.parentElement.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
-        console.log('Canvas resized to:', rect.width, 'x', rect.height);
     }
-    
+
     start() {
-        console.log('Starting MoodTrackerOverlay...');
         this.resizeCanvas();
-        
-        if (typeof Camera === 'undefined') {
-            console.error('Camera utility not loaded. Ensure MediaPipe libraries are loaded.');
-            return;
-        }
-        
+        window.addEventListener('resize', () => this.resizeCanvas());
+
         const camera = new Camera(this.video, {
             onFrame: async () => {
                 await this.faceMesh.send({ image: this.video });
             },
-            width: 1280,
-            height: 720
+            width: 960,
+            height: 540
         });
-        
+
         camera.start();
         appState.camera = camera;
-        console.log('Camera started');
     }
 }
 
-// ============ MAIN APPLICATION ============
-
-let overlay = null;
 const startCameraButton = document.getElementById('startCamera');
 const cameraContainer = document.getElementById('camera-container');
 const cameraFeed = document.getElementById('camera-feed');
 const recommendationsContainer = document.getElementById('recommendations-container');
 const recommendationsList = document.getElementById('recommendations-list');
 let cameraStream = null;
+let overlay = null;
+
+function renderRecommendations(recommendations) {
+    if (!recommendations || recommendations.length === 0) {
+        recommendationsList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">No recommendations yet.</div>';
+        return;
+    }
+
+    recommendationsList.innerHTML = recommendations.map((song) => `
+        <article class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-teal-300 hover:bg-teal-50">
+            <h4 class="font-semibold text-slate-900">${song.name}</h4>
+            <p class="text-sm text-slate-600">${song.artist}</p>
+            <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-teal-700">Mood matched recommendation</p>
+        </article>
+    `).join('');
+}
 
 startCameraButton.addEventListener('click', async () => {
     if (cameraStream) {
-        const tracks = cameraStream.getTracks();
-        tracks.forEach(track => track.stop());
+        cameraStream.getTracks().forEach((track) => track.stop());
         cameraFeed.srcObject = null;
-        cameraContainer.style.display = 'none';
-        recommendationsContainer.style.display = 'none';
-        startCameraButton.innerHTML = '<i class="fas fa-video mr-2"></i>Start Camera';
         cameraStream = null;
+        cameraContainer.classList.add('hidden');
+        recommendationsContainer.classList.add('hidden');
+        startCameraButton.textContent = 'Start Camera';
+        setChip(chipCamera, 'Camera: Idle', false);
+        setChip(chipFace, 'Face: Waiting', false);
+        if (appState.streamTimer) clearInterval(appState.streamTimer);
         return;
     }
 
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { width: 1280, height: 720 } 
-        });
-        cameraStream = stream;
-        cameraFeed.srcObject = stream;
-        cameraContainer.style.display = 'block';
-        recommendationsContainer.style.display = 'block';
-        startCameraButton.innerHTML = '<i class="fas fa-video-slash mr-2"></i>Stop Camera';
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 360 } });
+        cameraFeed.srcObject = cameraStream;
+        cameraContainer.classList.remove('hidden');
+        recommendationsContainer.classList.remove('hidden');
+        startCameraButton.textContent = 'Stop Camera';
+        setChip(chipCamera, 'Camera: Live', true);
+        setChip(chipStream, 'Network: Streaming', true);
 
-        // Initialize overlay system
         overlay = new MoodTrackerOverlay();
         overlay.start();
-        
-        // Send frames to backend for recommendations every 3 seconds
-        setInterval(() => {
-            if (!cameraStream) return;
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = cameraFeed.videoWidth;
-            canvas.height = cameraFeed.videoHeight;
-            const context = canvas.getContext('2d');
-            context.drawImage(cameraFeed, 0, 0, canvas.width, canvas.height);
-            const imageDataURL = canvas.toDataURL('image/jpeg');
+
+        let isFetching = false;
+        appState.streamTimer = setInterval(() => {
+            if (!cameraStream || !cameraFeed.videoWidth || isFetching) return;
+            isFetching = true;
+
+            const frameCanvas = document.createElement('canvas');
+            frameCanvas.width = 480;
+            frameCanvas.height = 270;
+            const context = frameCanvas.getContext('2d');
+            context.drawImage(cameraFeed, 0, 0, frameCanvas.width, frameCanvas.height);
+            const imageDataURL = frameCanvas.toDataURL('image/jpeg');
 
             fetch('/live_mood', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: imageDataURL })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.recommendations && data.recommendations.length > 0) {
-                    recommendationsList.innerHTML = data.recommendations.map(song => `
-                        <div class="flex items-center p-2 bg-gray-50 rounded-lg hover:bg-indigo-50 transition">
-                            <i class="fas fa-music mr-3 text-indigo-500"></i>
-                            <div>
-                                <div class="font-medium text-gray-800">${song.name}</div>
-                                <div class="text-sm text-gray-600">by ${song.artist}</div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }, 3000);
-
+                .then((response) => response.json())
+                .then((data) => {
+                    const backendMood = normalizeMood(data.mood_key || data.mood);
+                    appState.currentMood = overlay.stabilizeBackendMood(backendMood);
+                    appState.lastBackendMoodAt = Date.now();
+                    const now = Date.now();
+                    const moodChanged = backendMood !== appState.lastRecommendationMood;
+                    const enoughTimePassed = (now - appState.lastRecommendationAt) > 3500;
+                    if (moodChanged || enoughTimePassed) {
+                        renderRecommendations(data.recommendations || []);
+                        appState.lastRecommendationMood = backendMood;
+                        appState.lastRecommendationAt = now;
+                    }
+                    setChip(chipStream, 'Network: Synced', true);
+                })
+                .catch(() => setChip(chipStream, 'Network: Retry', false))
+                .finally(() => { isFetching = false; });
+        }, 500);
     } catch (error) {
-        console.error('Error accessing camera:', error);
-        alert('Could not access the camera. Please make sure you have a camera connected and have granted permission.');
+        setChip(chipCamera, 'Camera: Blocked', false);
+        alert('Could not access the camera. Check permission and try again.');
     }
 });
 </script>
 {% endblock %}
-              </button>
-              <button id="captureEmotion" type="button" class="btn btn-primary-modern" disabled>
-                <i class="fas fa-camera me-2"></i>Capture Mood
-              </button>
-            </div>
-            <div class="camera-container">
-              <video id="video" autoplay playsinline muted></video>
-              <div class="camera-overlay-modern"></div>
-              <div class="camera-guide">
-                <i class="fas fa-user-circle"></i>
-                <span>Position your face here</span>
-              </div>
-            </div>
-            <div id="cameraResult"></div>
-            <div id="cameraRecommendations" class="recommendations-modern d-none"></div>
-            <div class="camera-note">
-              <i class="fas fa-info-circle me-2"></i>
-              <small>Live camera mood capture uses AI analysis. Ensure good lighting and clear facial visibility for best results.</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="resultContainer" class="mt-5{% if not prediction %} d-none{% endif %}">
-        {% if prediction %}
-          <div class="result-card">
-            <div class="result-header">
-              <i class="fas fa-music result-icon"></i>
-              <h3>Analysis Complete</h3>
-            </div>
-            <div class="alert alert-success-modern" role="alert">
-              <i class="fas fa-check-circle me-2"></i>
-              <strong>Detected Mood:</strong> {{ prediction }}
-            </div>
-            <div class="audio-player">
-              <audio controls style="width:100%;">
-                <source src="{{ url_for('static', filename='audio/' + path.split('/')[-1]) }}" type="audio/{{ path.split('.')[-1] }}">
-                Your browser does not support the audio element.
-              </audio>
-            </div>
-            {% if recommendations %}
-              <div class="recommendations-modern">
-                <h4><i class="fas fa-list-ul me-2"></i>Recommended Songs</h4>
-                {% for song in recommendations %}
-                  <div class="song-item">
-                    <i class="fas fa-music song-icon"></i>
-                    <div class="song-info">
-                      <span class="song-title">{{ song.name }}</span>
-                      <span class="song-artist">by {{ song.artist }}</span>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            {% endif %}
-          </div>
-        {% endif %}
-      </div>
-    </div>
-  </main>
-
-  <script>
-    let cameraStream = null;
-
-    async function startCamera() {
-      const startButton = document.getElementById('startCamera');
-      const captureButton = document.getElementById('captureEmotion');
-      const video = document.getElementById('video');
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera access is not supported by your browser.');
-        return;
-      }
-
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        video.srcObject = cameraStream;
-        captureButton.disabled = false;
-        startButton.textContent = 'Camera active';
-        startButton.classList.remove('btn-outline-primary');
-        startButton.classList.add('btn-primary');
-        startButton.disabled = true;
-      } catch (error) {
-        alert('Unable to access the camera. Please allow camera permissions.');
-        console.error(error);
-      }
-    }
-
-    async function captureEmotion() {
-      const video = document.getElementById('video');
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 360;
-      const context = canvas.getContext('2d');
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = canvas.toDataURL('image/png');
-
-      const cameraResult = document.getElementById('cameraResult');
-      const cameraRecommendations = document.getElementById('cameraRecommendations');
-      cameraResult.innerHTML = '<div class="alert alert-info">Analyzing your expression…</div>';
-      cameraRecommendations.classList.add('d-none');
-
-      try {
-        const response = await fetch('{{ url_for('camera_emotion') }}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ image: imageData })
-        });
-        const result = await response.json();
-        if (response.ok) {
-          cameraResult.innerHTML = `<div class="alert alert-success">Emotion detected: <strong>${result.emotion}</strong> <span class="status-pill">Confidence ${Math.round(result.confidence * 100)}%</span></div>`;
-          if (result.recommendations && result.recommendations.length) {
-            let html = '<h3>Recommended songs</h3>';
-            result.recommendations.forEach(song => {
-              html += `<div class="recommendation-item"><p>${song.name} by <span class="artist">${song.artist}</span></p></div>`;
-            });
-            cameraRecommendations.innerHTML = html;
-            cameraRecommendations.classList.remove('d-none');
-          }
-        } else {
-          cameraResult.innerHTML = `<div class="alert alert-danger">Error: ${result.error || 'Unable to detect emotion.'}</div>`;
-        }
-      } catch (error) {
-        cameraResult.innerHTML = '<div class="alert alert-danger">Error sending image to server.</div>';
-        console.error(error);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-      document.getElementById('startCamera').addEventListener('click', startCamera);
-      document.getElementById('captureEmotion').addEventListener('click', captureEmotion);
-    });
-  </script>
-
-  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
-  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
-</body>
-</html>

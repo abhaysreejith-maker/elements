@@ -153,6 +153,8 @@ except Exception as e:
     data = pd.DataFrame()
     similarity_matrix = np.array([])
 
+RECOMMENDATION_CACHE = {}
+
 def recommend_songs(predicted_mood, num_recommendations=10):
     mood_recommendations = {
         'happy': ['happy', 'energetic'],
@@ -167,6 +169,11 @@ def recommend_songs(predicted_mood, num_recommendations=10):
     }
 
     recommended_moods = mood_recommendations.get(predicted_mood.lower(), ['happy', 'calm'])
+
+    cache_key = (predicted_mood.lower(), num_recommendations)
+    if cache_key in RECOMMENDATION_CACHE:
+        return RECOMMENDATION_CACHE[cache_key]
+
     recommended_songs = []
 
     if similarity_matrix.size == 0 or data.empty:
@@ -175,14 +182,19 @@ def recommend_songs(predicted_mood, num_recommendations=10):
     # Simple recommendation logic for demo
     filtered_songs = data[data['mood'].str.lower().isin(recommended_moods)]
     if not filtered_songs.empty:
-        sample_size = min(len(filtered_songs), num_recommendations)
-        songs = filtered_songs.sample(sample_size)
+        songs = (
+            filtered_songs
+            .drop_duplicates(subset=['name', 'artist'])
+            .sort_values(by=['name', 'artist'], kind='mergesort')
+            .head(num_recommendations)
+        )
         for _, song in songs.iterrows():
             recommended_songs.append({
                 'name': song['name'],
                 'artist': song['artist']
             })
 
+    RECOMMENDATION_CACHE[cache_key] = recommended_songs
     return recommended_songs
 
 
@@ -268,37 +280,86 @@ def record_audio(record=True, file_loc=None):
             return emo.capitalize()
 
 
-# from deepface import DeepFace  # Commented out due to dependency issues
+try:
+    from deepface import DeepFace
+except Exception:
+    DeepFace = None
 import cv2
-import random
 # ... existing code ...
-def predict_camera_emotion(image_bytes):
-    try:
-        # For now, return a random emotion since DeepFace has dependency issues
-        # TODO: Implement proper emotion detection when dependencies are resolved
-        emotions = ['happy', 'sad', 'angry', 'fear', 'surprise', 'neutral', 'disgust']
-        return random.choice(emotions)
+LAST_CAMERA_MOOD = "neutral"
 
-        # Original DeepFace code (commented out):
-        # # Convert bytes to numpy array
-        # nparr = np.frombuffer(image_bytes, np.uint8)
-        # # Decode image
-        # img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        #
-        # # Analyze the image
-        # result = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
-        #
-        # # The result is a list of dictionaries, one for each detected face.
-        # # We'll take the first one.
-        # if result and isinstance(result, list):
-        #     dominant_emotion = result[0]['dominant_emotion']
-        #     return dominant_emotion
-        # else:
-        #     return "neutral"
+def predict_camera_emotion(image_bytes):
+    global LAST_CAMERA_MOOD
+    try:
+        if DeepFace is None:
+            return LAST_CAMERA_MOOD
+
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return LAST_CAMERA_MOOD
+
+        height, width = img.shape[:2]
+        max_width = 320
+        if width > max_width:
+            scale = max_width / float(width)
+            img = cv2.resize(img, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA)
+
+        result = DeepFace.analyze(
+            img,
+            actions=['emotion'],
+            enforce_detection=False,
+            detector_backend='opencv',
+            silent=True
+        )
+
+        payload = result[0] if isinstance(result, list) and result else result if isinstance(result, dict) else {}
+        dominant_emotion = payload.get('dominant_emotion', 'neutral')
+        emotion_scores = payload.get('emotion', {}) or {}
+
+        mood_map = {
+            'fear': 'fearful',
+            'surprise': 'surprised',
+            'disgust': 'disgust'
+        }
+        final_mood = mood_map.get(dominant_emotion, dominant_emotion)
+
+        # Score-based calibration to reduce false fearful/surprised spikes in low-light/noisy frames.
+        neutral_score = float(emotion_scores.get('neutral', 0.0))
+        happy_score = float(emotion_scores.get('happy', 0.0))
+        sad_score = float(emotion_scores.get('sad', 0.0))
+        angry_score = float(emotion_scores.get('angry', 0.0))
+        fear_score = float(emotion_scores.get('fear', 0.0))
+        surprise_score = float(emotion_scores.get('surprise', 0.0))
+
+        if final_mood in {'fearful', 'surprised'}:
+            if neutral_score >= 30.0 or max(happy_score, sad_score, angry_score) >= 25.0:
+                final_mood = 'neutral'
+
+        # If model is unsure overall, prefer neutral.
+        dominant_score = float(emotion_scores.get(dominant_emotion, 0.0))
+        if dominant_score < 18.0:
+            final_mood = 'neutral'
+
+        # Promote stronger core emotions when clearly above neutral.
+        if happy_score >= 35.0 and happy_score > neutral_score:
+            final_mood = 'happy'
+        elif sad_score >= 35.0 and sad_score > neutral_score:
+            final_mood = 'sad'
+        elif angry_score >= 35.0 and angry_score > neutral_score:
+            final_mood = 'angry'
+        elif neutral_score >= 40.0:
+            final_mood = 'neutral'
+
+        if final_mood not in {'happy', 'sad', 'angry', 'neutral', 'surprised', 'fearful', 'disgust'}:
+            final_mood = 'neutral'
+
+        LAST_CAMERA_MOOD = final_mood
+        return final_mood
 
     except Exception as e:
         print(f"Error in emotion detection: {e}")
-        return "neutral"
+        return LAST_CAMERA_MOOD
 
 @app.route('/capture_mood', methods=['POST'])
 def capture_mood():
@@ -333,7 +394,11 @@ def live_mood():
     
     recommendations = recommend_songs(predicted_mood=predicted_mood)
     
-    return jsonify({'mood': predicted_mood.capitalize(), 'recommendations': recommendations})
+    return jsonify({
+        'mood': predicted_mood.capitalize(),
+        'mood_key': predicted_mood.lower(),
+        'recommendations': recommendations
+    })
 
 
 if __name__ == '__main__':
