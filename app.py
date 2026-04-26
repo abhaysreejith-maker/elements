@@ -126,6 +126,11 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+@app.route('/demo_login')
+def demo_login():
+    session['user_email'] = 'demo@example.com'
+    return redirect(url_for('home'))
+
 # Load recommendation data
 try:
     data = pd.read_csv('data_moods.csv')
@@ -263,35 +268,66 @@ def record_audio(record=True, file_loc=None):
             return emo.capitalize()
 
 
+from deepface import DeepFace
+import cv2
+# ... existing code ...
 def predict_camera_emotion(image_bytes):
-    emotions = ['happy', 'calm', 'neutral', 'sad', 'angry', 'surprised']
-    computed = sum(image_bytes) % len(emotions)
-    emotion = emotions[computed]
-    confidence = round(((sum(image_bytes) % 40) + 60) / 100, 2)
-    return emotion, confidence
-
-@app.route('/camera_emotion', methods=['POST'])
-def camera_emotion():
-    data = request.json
-    if not data or 'image' not in data:
-        return jsonify({'error': 'No image provided'}), 400
-
-    image_data = data['image']
-    if image_data.startswith('data:'):
-        image_data = image_data.split(',', 1)[1]
-
     try:
-        image_bytes = base64.b64decode(image_data)
-    except Exception:
-        return jsonify({'error': 'Invalid image data'}), 400
+        # Convert bytes to numpy array
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        # Decode image
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        # Analyze the image
+        result = DeepFace.analyze(img, actions=['emotion'], enforce_detection=False)
+        
+        # The result is a list of dictionaries, one for each detected face.
+        # We'll take the first one.
+        if result and isinstance(result, list):
+            dominant_emotion = result[0]['dominant_emotion']
+            return dominant_emotion
+        else:
+            return "neutral"
 
-    predicted_mood, confidence = predict_camera_emotion(image_bytes)
+    except Exception as e:
+        print(f"Error in emotion detection: {e}")
+        return "neutral"
+
+@app.route('/capture_mood', methods=['POST'])
+def capture_mood():
+    data = request.get_json()
+    image_data = data['image'].split(',')[1]
+    image_bytes = base64.b64decode(image_data)
+    
+    predicted_mood = predict_camera_emotion(image_bytes)
+    
+    session['predicted_mood'] = predicted_mood
+    
+    return jsonify({'redirect': url_for('recommendations')})
+
+
+@app.route('/recommendations')
+def recommendations():
+    if not session.get('user_email'):
+        return redirect(url_for('login'))
+        
+    predicted_mood = session.get('predicted_mood', 'happy')
     recommendations = recommend_songs(predicted_mood=predicted_mood)
-    return jsonify({
-        'emotion': predicted_mood.capitalize(),
-        'confidence': confidence,
-        'recommendations': recommendations
-    })
+    
+    return render_template('recommendations.html', mood=predicted_mood, recommendations=recommendations)
+
+@app.route('/live_mood', methods=['POST'])
+def live_mood():
+    data = request.get_json()
+    image_data = data['image'].split(',')[1]
+    image_bytes = base64.b64decode(image_data)
+    
+    predicted_mood = predict_camera_emotion(image_bytes)
+    
+    recommendations = recommend_songs(predicted_mood=predicted_mood)
+    
+    return jsonify({'mood': predicted_mood.capitalize(), 'recommendations': recommendations})
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

@@ -1,100 +1,71 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <meta name="keywords" content="login, vocalize" />
-  <meta name="description" content="Vocalize login page." />
-  <meta name="author" content="Vocalize" />
+{% block title %}Login{% endblock %}
 
-  <title>Vocalize | Login</title>
-  <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.css" />
-  <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Roboto:400,700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link href="/static/css/style.css" rel="stylesheet" />
-  <link href="/static/css/responsive.css" rel="stylesheet" />
-</head>
-
-<body class="sub_page">
-  <header class="header_section">
-    <div class="container">
-      <nav class="navbar navbar-expand-lg custom_nav-container">
-        <a class="navbar-brand" href="{{ url_for('index') }}">
-          <img src="/static/images/logo.png" alt="Vocalize logo">
-          <span>Vocalize</span>
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <div>
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        Sign in to your account
+      </h2>
+      <p class="mt-2 text-center text-sm text-gray-600">
+        Or
+        <a href="{{ url_for('register') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+          start your 14-day free trial
         </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-          aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
+      </p>
+    </div>
+    {% if message %}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline">{{ message }}</span>
+      </div>
+    {% endif %}
+    <form class="mt-8 space-y-6" action="{{ url_for('login') }}" method="POST">
+      <input type="hidden" name="remember" value="true">
+      <div class="rounded-md shadow-sm -space-y-px">
+        <div>
+          <label for="email-address" class="sr-only">Email address</label>
+          <input id="email-address" name="useremail" type="email" autocomplete="email" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Email address">
+        </div>
+        <div>
+          <label for="password" class="sr-only">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Password">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+          <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+            Remember me
+          </label>
+        </div>
+
+        <div class="text-sm">
+          <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">
+            Forgot your password?
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+            <!-- Heroicon name: solid/lock-closed -->
+            <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+          </span>
+          Sign in
         </button>
-
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <div class="d-flex mx-auto flex-column flex-lg-row align-items-center">
-            <ul class="navbar-nav">
-              <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
-              <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">About</a></li>
-              <li class="nav-item active"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-              <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-    </div>
-  </header>
-
-  <section class="auth-hero">
-    <div class="container">
-      <div class="auth-hero-content">
-        <h1>Welcome Back</h1>
-        <p>Sign in to continue your musical journey</p>
       </div>
-    </div>
-  </section>
-
-  <section class="auth-section">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-lg-6">
-          <div class="auth-card">
-            <div class="auth-header">
-              <i class="fas fa-sign-in-alt auth-icon"></i>
-              <h2>Sign In to Vocalize</h2>
-              <p class="text-muted">Access your personalized music recommendations</p>
-            </div>
-            {% if message %}
-              <div class="alert alert-info-modern" role="alert">
-                <i class="fas fa-info-circle me-2"></i>{{ message }}
-              </div>
-            {% endif %}
-            <form action="{{ url_for('login') }}" method="post">
-              <div class="form-group-modern">
-                <label for="email" class="form-label-modern">
-                  <i class="fas fa-envelope me-2"></i>Email Address
-                </label>
-                <input type="email" class="form-control-modern" id="email" name="useremail" placeholder="Enter your email" required>
-              </div>
-              <div class="form-group-modern">
-                <label for="password" class="form-label-modern">
-                  <i class="fas fa-lock me-2"></i>Password
-                </label>
-                <input type="password" class="form-control-modern" id="password" name="password" placeholder="Enter your password" required>
-              </div>
-              <button type="submit" class="btn btn-primary-modern w-100">
-                <i class="fas fa-sign-in-alt me-2"></i>Sign In
-              </button>
-            </form>
-            <div class="auth-footer">
-              <p>Don't have an account? <a href="{{ url_for('register') }}" class="auth-link">Create one here</a></p>
-            </div>
-          </div>
-        </div>
+    </form>
+  </div>
+</div>
+<div class="text-center">
+        <a href="{{ url_for('demo_login') }}" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+          Demo Login
+        </a>
       </div>
-    </div>
-  </section>
-
-  <script type="text/javascript" src="/static/js/jquery-3.4.1.min.js"></script>
-  <script type="text/javascript" src="/static/js/bootstrap.js"></script>
-</body>
-</html>
+{% endblock %}

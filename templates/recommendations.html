@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Recommendations{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="text-center">
+        <h1 class="text-4xl font-bold text-gray-800">Your Mood: <span class="text-indigo-600">{{ mood.capitalize() }}</span></h1>
+        <p class="mt-2 text-lg text-gray-600">Here are some songs we think you'll like.</p>
+    </div>
+
+    <div class="mt-12">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {% for song in recommendations %}
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold text-gray-800">{{ song.name }}</h3>
+                    <p class="mt-1 text-gray-600">{{ song.artist }}</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center">
+                <p class="text-gray-600">No recommendations found for your mood.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
