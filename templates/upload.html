@@ -47,6 +47,38 @@
 
             <button id="startCamera" type="button" class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Start Camera</button>
 
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Response Speed
+                    <select id="responseProfile" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800">
+                        <option value="fast">Fast</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="stable">Stable</option>
+                    </select>
+                </label>
+                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Recommendation Mode
+                    <select id="recommendationMode" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800">
+                        <option value="discover" selected>Discover</option>
+                        <option value="familiar">Familiar</option>
+                        <option value="focus">Focus</option>
+                        <option value="chill">Chill</option>
+                    </select>
+                </label>
+                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold uppercase tracking-wider text-slate-600 sm:col-span-2">
+                    Quick Mood Check-in (optional)
+                    <select id="moodCheckin" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800">
+                        <option value="neutral" selected>No check-in</option>
+                        <option value="happy">Happy</option>
+                        <option value="sad">Sad</option>
+                        <option value="angry">Angry</option>
+                        <option value="fearful">Fearful</option>
+                        <option value="surprised">Surprised</option>
+                        <option value="disgust">Disgust</option>
+                    </select>
+                </label>
+            </div>
+
             <div id="camera-container" class="mt-4 hidden overflow-hidden rounded-2xl border border-slate-200 bg-slate-900" style="position: relative;">
                 <video id="camera-feed" class="w-full" autoplay playsinline style="display: block;"></video>
                 <canvas id="overlay-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
@@ -58,14 +90,37 @@
                 <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Mood Timeline</p>
                 <div id="mood-timeline" class="flex min-h-[34px] flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2"></div>
             </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Explainability</p>
+                    <p id="mood-confidence" class="mt-2 text-sm font-semibold text-slate-800">Confidence: 0%</p>
+                    <p id="mood-top-emotions" class="mt-1 text-xs text-slate-600">Top signals: -</p>
+                    <p id="mood-latency" class="mt-1 text-xs text-slate-500">Inference: - ms</p>
+                    <p id="mood-fusion" class="mt-1 text-xs text-slate-500">Source: camera</p>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Session Insights</p>
+                    <p id="session-dominant" class="mt-2 text-sm font-semibold text-slate-800">Dominant mood: Neutral</p>
+                    <p id="session-switches" class="mt-1 text-xs text-slate-600">Mood switches: 0</p>
+                    <p id="session-accuracy" class="mt-1 text-xs text-slate-600">Feedback: 0 matches, 0 mismatches</p>
+                </div>
+            </div>
         </article>
     </div>
 
     <section id="recommendations-container" class="mt-6 hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex items-center justify-between gap-3">
             <h3 class="title-font text-2xl font-semibold text-slate-900">Recommended Songs</h3>
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Updates every 3s while camera is live</p>
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Updates when mood stabilizes</p>
         </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+            <button id="feedback-match" type="button" class="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">This matches my mood</button>
+            <button id="feedback-mismatch" type="button" class="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Not accurate</button>
+            <button id="save-set" type="button" class="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700">Save current set</button>
+            <button id="share-card" type="button" class="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Share mood card</button>
+        </div>
+        <p id="feedback-status" class="mt-2 text-xs text-slate-500"></p>
         <div id="recommendations-list" class="mt-4 grid gap-3 sm:grid-cols-2"></div>
     </section>
 </section>
@@ -77,12 +132,20 @@
 <script>
 const appState = {
     currentMood: 'neutral',
+    previousMood: 'neutral',
     moodHistory: [],
     moodBuffer: [],
     backendMoodBuffer: [],
     lastBackendMoodAt: 0,
     lastRecommendationMood: 'neutral',
     lastRecommendationAt: 0,
+    moodSwitches: 0,
+    feedback: { match: 0, mismatch: 0 },
+    responseProfile: 'balanced',
+    recommendationMode: 'discover',
+    pollMs: 500,
+    bufferSize: 5,
+    lastRecommendations: [],
     frameCount: 0,
     animationTime: 0,
     landmarks: null,
@@ -265,7 +328,7 @@ class MoodTrackerOverlay {
 
     stabilizeBackendMood(nextMood) {
         appState.backendMoodBuffer.push(nextMood);
-        if (appState.backendMoodBuffer.length > 5) {
+        if (appState.backendMoodBuffer.length > appState.bufferSize) {
             appState.backendMoodBuffer.shift();
         }
 
@@ -323,6 +386,21 @@ const cameraContainer = document.getElementById('camera-container');
 const cameraFeed = document.getElementById('camera-feed');
 const recommendationsContainer = document.getElementById('recommendations-container');
 const recommendationsList = document.getElementById('recommendations-list');
+const responseProfileSelect = document.getElementById('responseProfile');
+const recommendationModeSelect = document.getElementById('recommendationMode');
+const moodCheckinSelect = document.getElementById('moodCheckin');
+const moodConfidence = document.getElementById('mood-confidence');
+const moodTopEmotions = document.getElementById('mood-top-emotions');
+const moodLatency = document.getElementById('mood-latency');
+const moodFusion = document.getElementById('mood-fusion');
+const sessionDominant = document.getElementById('session-dominant');
+const sessionSwitches = document.getElementById('session-switches');
+const sessionAccuracy = document.getElementById('session-accuracy');
+const feedbackStatus = document.getElementById('feedback-status');
+const feedbackMatchButton = document.getElementById('feedback-match');
+const feedbackMismatchButton = document.getElementById('feedback-mismatch');
+const saveSetButton = document.getElementById('save-set');
+const shareCardButton = document.getElementById('share-card');
 let cameraStream = null;
 let overlay = null;
 
@@ -336,10 +414,129 @@ function renderRecommendations(recommendations) {
         <article class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-teal-300 hover:bg-teal-50">
             <h4 class="font-semibold text-slate-900">${song.name}</h4>
             <p class="text-sm text-slate-600">${song.artist}</p>
-            <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-teal-700">Mood matched recommendation</p>
+            <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-teal-700">${song.mode || 'discover'} • ${song.time_bucket || 'anytime'}</p>
         </article>
     `).join('');
 }
+
+function applyResponseProfile(profile) {
+    const profiles = {
+        fast: { pollMs: 350, bufferSize: 3 },
+        balanced: { pollMs: 500, bufferSize: 5 },
+        stable: { pollMs: 800, bufferSize: 8 }
+    };
+    const selected = profiles[profile] || profiles.balanced;
+    appState.responseProfile = profile;
+    appState.pollMs = selected.pollMs;
+    appState.bufferSize = selected.bufferSize;
+    if (overlay) {
+        appState.backendMoodBuffer = appState.backendMoodBuffer.slice(-appState.bufferSize);
+    }
+}
+
+function updateExplainability(data) {
+    const confidence = Number(data.confidence || 0);
+    const top = Array.isArray(data.top_emotions) ? data.top_emotions : [];
+    const topText = top.length
+        ? top.map((item) => `${item.emotion} ${Number(item.score || 0).toFixed(0)}%`).join(', ')
+        : '-';
+
+    moodConfidence.textContent = `Confidence: ${confidence.toFixed(0)}%`;
+    moodTopEmotions.textContent = `Top signals: ${topText}`;
+    moodLatency.textContent = `Inference: ${Number(data.latency_ms || 0)} ms`;
+    const source = String(data.fusion_source || 'camera').replace('+', ' + ');
+    const sourceConfidence = Number(data.fusion_confidence || confidence);
+    moodFusion.textContent = `Source: ${source} (${sourceConfidence.toFixed(0)}%)`;
+}
+
+function updateSessionInsights() {
+    const counts = appState.moodHistory.reduce((acc, mood) => {
+        acc[mood] = (acc[mood] || 0) + 1;
+        return acc;
+    }, {});
+    const dominant = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || 'neutral';
+
+    sessionDominant.textContent = `Dominant mood: ${dominant.charAt(0).toUpperCase() + dominant.slice(1)}`;
+    sessionSwitches.textContent = `Mood switches: ${appState.moodSwitches}`;
+    sessionAccuracy.textContent = `Feedback: ${appState.feedback.match} matches, ${appState.feedback.mismatch} mismatches`;
+}
+
+async function sendFeedback(verdict) {
+    try {
+        const response = await fetch('/mood_feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                verdict,
+                mood: appState.currentMood,
+                recommendation_mode: appState.recommendationMode
+            })
+        });
+        if (!response.ok) {
+            feedbackStatus.textContent = 'Feedback could not be saved.';
+            return;
+        }
+
+        appState.feedback[verdict] += 1;
+        updateSessionInsights();
+        feedbackStatus.textContent = 'Feedback saved. Recommendations will adapt over time.';
+    } catch (error) {
+        feedbackStatus.textContent = 'Network issue while saving feedback.';
+    }
+}
+
+function saveCurrentSet() {
+    if (!appState.lastRecommendations.length) {
+        feedbackStatus.textContent = 'No recommendations available to save yet.';
+        return;
+    }
+
+    const existing = JSON.parse(localStorage.getItem('savedMoodSets') || '[]');
+    existing.unshift({
+        mood: appState.currentMood,
+        mode: appState.recommendationMode,
+        savedAt: new Date().toISOString(),
+        songs: appState.lastRecommendations
+    });
+    localStorage.setItem('savedMoodSets', JSON.stringify(existing.slice(0, 20)));
+    feedbackStatus.textContent = 'Saved to your local mood sets.';
+}
+
+async function shareMoodCard() {
+    const songs = appState.lastRecommendations.slice(0, 3).map((song) => `${song.name} - ${song.artist}`).join(', ');
+    const text = `Current mood: ${appState.currentMood}. Mode: ${appState.recommendationMode}. Picks: ${songs || 'No songs yet'}`;
+    try {
+        if (navigator.share) {
+            await navigator.share({ title: 'My Mood Card', text });
+            feedbackStatus.textContent = 'Mood card shared.';
+            return;
+        }
+
+        await navigator.clipboard.writeText(text);
+        feedbackStatus.textContent = 'Mood card copied to clipboard.';
+    } catch (error) {
+        feedbackStatus.textContent = 'Unable to share right now.';
+    }
+}
+
+responseProfileSelect.addEventListener('change', (event) => {
+    applyResponseProfile(event.target.value);
+    feedbackStatus.textContent = 'Response speed updated. Restart camera to apply polling interval.';
+});
+
+recommendationModeSelect.addEventListener('change', (event) => {
+    appState.recommendationMode = event.target.value;
+    appState.lastRecommendationAt = 0;
+    appState.lastRecommendationMood = 'neutral';
+});
+
+feedbackMatchButton.addEventListener('click', () => sendFeedback('match'));
+feedbackMismatchButton.addEventListener('click', () => sendFeedback('mismatch'));
+saveSetButton.addEventListener('click', saveCurrentSet);
+shareCardButton.addEventListener('click', shareMoodCard);
+
+applyResponseProfile(responseProfileSelect.value);
+appState.recommendationMode = recommendationModeSelect.value;
 
 startCameraButton.addEventListener('click', async () => {
     if (cameraStream) {
@@ -352,6 +549,8 @@ startCameraButton.addEventListener('click', async () => {
         setChip(chipCamera, 'Camera: Idle', false);
         setChip(chipFace, 'Face: Waiting', false);
         if (appState.streamTimer) clearInterval(appState.streamTimer);
+        appState.streamTimer = null;
+        appState.backendMoodBuffer = [];
         return;
     }
 
@@ -366,42 +565,62 @@ startCameraButton.addEventListener('click', async () => {
 
         overlay = new MoodTrackerOverlay();
         overlay.start();
+        appState.lastRecommendationMood = 'neutral';
+        appState.lastRecommendationAt = 0;
+        appState.previousMood = appState.currentMood;
+
+        const frameCanvas = document.createElement('canvas');
+        frameCanvas.width = 480;
+        frameCanvas.height = 270;
+        const context = frameCanvas.getContext('2d');
 
         let isFetching = false;
         appState.streamTimer = setInterval(() => {
             if (!cameraStream || !cameraFeed.videoWidth || isFetching) return;
             isFetching = true;
 
-            const frameCanvas = document.createElement('canvas');
-            frameCanvas.width = 480;
-            frameCanvas.height = 270;
-            const context = frameCanvas.getContext('2d');
             context.drawImage(cameraFeed, 0, 0, frameCanvas.width, frameCanvas.height);
-            const imageDataURL = frameCanvas.toDataURL('image/jpeg');
+            const imageDataURL = frameCanvas.toDataURL('image/jpeg', 0.6);
+            const now = Date.now();
+            const shouldRequestRecommendations =
+                (now - appState.lastRecommendationAt) > 7000 ||
+                appState.currentMood !== appState.lastRecommendationMood;
 
             fetch('/live_mood', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: imageDataURL })
+                body: JSON.stringify({
+                    image: imageDataURL,
+                    include_recommendations: shouldRequestRecommendations,
+                    recommendation_mode: appState.recommendationMode,
+                    user_hint_mood: moodCheckinSelect.value
+                })
             })
                 .then((response) => response.json())
                 .then((data) => {
                     const backendMood = normalizeMood(data.mood_key || data.mood);
-                    appState.currentMood = overlay.stabilizeBackendMood(backendMood);
-                    appState.lastBackendMoodAt = Date.now();
-                    const now = Date.now();
-                    const moodChanged = backendMood !== appState.lastRecommendationMood;
-                    const enoughTimePassed = (now - appState.lastRecommendationAt) > 3500;
-                    if (moodChanged || enoughTimePassed) {
-                        renderRecommendations(data.recommendations || []);
-                        appState.lastRecommendationMood = backendMood;
-                        appState.lastRecommendationAt = now;
+                    const stableMood = overlay.stabilizeBackendMood(backendMood);
+                    if (appState.previousMood !== stableMood) {
+                        appState.moodSwitches += 1;
                     }
+                    appState.previousMood = stableMood;
+                    appState.currentMood = stableMood;
+                    appState.lastBackendMoodAt = Date.now();
+                    updateExplainability(data);
+
+                    if (data.recommendations_included) {
+                        renderRecommendations(data.recommendations || []);
+                        appState.lastRecommendations = data.recommendations || [];
+                        appState.lastRecommendationMood = stableMood;
+                        appState.lastRecommendationAt = Date.now();
+                    }
+
+                    updateSessionInsights();
                     setChip(chipStream, 'Network: Synced', true);
                 })
                 .catch(() => setChip(chipStream, 'Network: Retry', false))
                 .finally(() => { isFetching = false; });
-        }, 500);
+        }, appState.pollMs);
     } catch (error) {
         setChip(chipCamera, 'Camera: Blocked', false);
         alert('Could not access the camera. Check permission and try again.');

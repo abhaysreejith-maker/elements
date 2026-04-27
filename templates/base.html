@@ -41,6 +41,7 @@
             <div class="flex items-center gap-2 sm:gap-3">
                 {% if logged_in_user %}
                     <a href="{{ url_for('upload') }}" class="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Detect Mood</a>
+                    <a href="{{ url_for('insights') }}" class="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Insights</a>
                     <a href="{{ url_for('logout') }}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Logout</a>
                 {% else %}
                     <a href="{{ url_for('login') }}" class="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Login</a>

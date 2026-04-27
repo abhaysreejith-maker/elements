@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Insights{% endblock %}
+
+{% block content %}
+<section class="rounded-3xl border border-white/70 bg-white/85 p-6 shadow-xl sm:p-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-800">Behavior Analytics</p>
+            <h1 class="title-font mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">Mood Insights</h1>
+            <p class="mt-2 max-w-2xl text-slate-600">Review recent mood events, feedback quality, and recommendation patterns.</p>
+        </div>
+        <a href="{{ url_for('upload') }}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">Back To Live Studio</a>
+    </div>
+
+    <div class="mt-6 grid gap-4 sm:grid-cols-3">
+        <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Dominant Mood</p>
+            <p class="mt-2 text-2xl font-bold text-slate-900">{{ dominant_mood|capitalize }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Tracked Events</p>
+            <p class="mt-2 text-2xl font-bold text-slate-900">{{ total_events }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Feedback Accuracy</p>
+            <p class="mt-2 text-2xl font-bold text-slate-900">{{ feedback_summary.match }} / {{ feedback_summary.match + feedback_summary.mismatch }}</p>
+            <p class="mt-1 text-xs text-slate-600">{{ feedback_summary.match }} match, {{ feedback_summary.mismatch }} mismatch</p>
+        </article>
+    </div>
+
+    <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <h2 class="title-font text-lg font-semibold text-slate-900">Recent Mood Events</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[720px] text-left text-sm">
+                <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                    <tr>
+                        <th class="px-4 py-3">Mood</th>
+                        <th class="px-4 py-3">Source</th>
+                        <th class="px-4 py-3">Confidence</th>
+                        <th class="px-4 py-3">Mode</th>
+                        <th class="px-4 py-3">Timestamp (UTC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if events %}
+                        {% for event in events %}
+                        <tr class="border-t border-slate-100">
+                            <td class="px-4 py-3 font-semibold text-slate-900">{{ event.mood|capitalize }}</td>
+                            <td class="px-4 py-3 text-slate-700">{{ event.source }}</td>
+                            <td class="px-4 py-3 text-slate-700">{{ '%.1f'|format(event.confidence or 0) }}%</td>
+                            <td class="px-4 py-3 text-slate-700">{{ event.recommendation_mode|capitalize }}</td>
+                            <td class="px-4 py-3 text-slate-500">{{ event.created_at }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="px-4 py-6 text-center text-slate-500">No mood events recorded yet. Open the live camera flow to start tracking.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
