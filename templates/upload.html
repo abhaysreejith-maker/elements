@@ -313,13 +313,19 @@
             const mouthV = d(13,14); const mouthH = d(61,291);
             const MAR = mouthH ? (mouthV/mouthH) : 0;
             // Smile: compare corners vs center
-            const mouthLeftY = landmarks[61].y; const mouthRightY = landmarks[291].y;
+            const mouthLeft = landmarks[61]; const mouthRight = landmarks[291];
+            const mouthLeftY = mouthLeft.y; const mouthRightY = mouthRight.y;
             const mouthCenterY = (landmarks[13].y + landmarks[14].y)/2;
             const smile = Math.max(0, (mouthCenterY - ((mouthLeftY + mouthRightY)/2)) / Math.max(faceScale, 1));
+            // mouth corner angle: average angle of both corners relative to mouth center (radians)
+            const ml_dx = mouthLeft.x - landmarks[13].x; const ml_dy = mouthLeft.y - landmarks[13].y;
+            const mr_dx = mouthRight.x - landmarks[14].x; const mr_dy = mouthRight.y - landmarks[14].y;
+            const mouthCornerAngle = ((Math.atan2(ml_dy, ml_dx) + Math.atan2(mr_dy, mr_dx))/2) || 0;
             // Brow gap
             const eyeCenterY = ((landmarks[159].y+landmarks[145].y)/2 + (landmarks[386].y+landmarks[374].y)/2)/2;
             const browLeftY = landmarks[70].y; const browRightY = landmarks[300].y;
             const browGap = (((browLeftY + browRightY)/2) - eyeCenterY) / Math.max(faceScale, 1);
+            const eyebrowEyeDist = browGap; // alias for clarity
 
             const mouthCornerLift = ((mouthLeftY + mouthRightY) / 2 - mouthCenterY) / Math.max(faceScale, 1);
             const jawLeft = landmarks[234];
@@ -338,13 +344,13 @@
                 jawTension: jawTension - (previous.jawTension || jawTension)
             };
 
-            return {avgEAR, MAR, smile, mouthCornerLift, browGap, jawTension, faceScale, delta};
+            return {avgEAR, MAR, smile, mouthCornerLift, mouthCornerAngle, eyebrowEyeDist, browGap, jawTension, faceScale, delta};
         }
 
         function classifyMood(metrics, previousState) {
             // Base scores - equal starting point so neutral isn't privileged
             const scores = {happy:14, sad:14, angry:14, surprised:14, neutral:14, calm:14, focused:14};
-            const {avgEAR, MAR, smile, mouthCornerLift, browGap, jawTension, delta} = metrics;
+            const {avgEAR, MAR, smile, mouthCornerLift, mouthCornerAngle, eyebrowEyeDist, browGap, jawTension, delta} = metrics;
             const prev = previousState || { mood: 'neutral', confidence: 0, scores: scores };
 
             // Lightweight temporal smoothing: remember prior state but keep it responsive.
@@ -375,6 +381,34 @@
             if (smile < -0.008 || delta.smile < -0.004) { scores.sad += 16; }
             if (smile < -0.012 || mouthCornerLift < -0.012) { scores.sad += 30; }
 
+            // New: compute combined sadness score using mouth corner angle, mouth corner lift, EAR, eyebrow-eye distance and low movement
+            const mouthDown = Math.max(0, -mouthCornerLift); // positive when corners below center
+            const mouthAngleDown = Math.max(0, -mouthCornerAngle); // negative angles -> downward tilt
+            const browLow = Math.max(0, -eyebrowEyeDist);
+            const earLow = Math.max(0, 0.20 - avgEAR);
+            const lowMovement = Math.abs(delta.ear) < 0.008 && Math.abs(delta.mar) < 0.008 && Math.abs(delta.smile) < 0.006;
+
+            let sadnessRaw = 0;
+            sadnessRaw += mouthDown * 120;         // mouth vertical curvature influence
+            sadnessRaw += mouthAngleDown * 80;    // mouth corner angle influence
+            sadnessRaw += earLow * 100;           // reduced eye openness influence
+            sadnessRaw += browLow * 70;           // lowered brows influence
+            sadnessRaw += (lowMovement ? 25 : 0); // low movement influence
+            if (delta.smile < -0.004) sadnessRaw += 30; // rapid downward mouth movement
+
+            const sadNorm = Math.min(100, Math.round(sadnessRaw));
+            // Light exponential smoothing of sadness signal
+            const sadAlpha = 0.28;
+            const prevSad = (prev.sadnessSmoothed != null) ? prev.sadnessSmoothed : sadNorm;
+            const sadSmoothed = Math.round(sadNorm * (1 - sadAlpha) + prevSad * sadAlpha);
+
+            // Apply weighted scoring: boost sad and reduce neutral based on smoothed sadness
+            if (sadSmoothed > 18) {
+                const boost = Math.round(sadSmoothed * 0.6);
+                scores.sad += boost;
+                scores.neutral = Math.max(0, scores.neutral - Math.round(sadSmoothed * 0.25));
+            }
+
             // Eyebrows / anger / focus
             if (browGap < -0.018 || delta.browGap < -0.004) { scores.angry += 28; scores.focused += 10; }
             if (browGap < -0.008) { scores.angry += 14; }
@@ -388,7 +422,6 @@
             if (avgEAR > 0.22 && smile > 0.010) { scores.happy += 18; }
             if (avgEAR < 0.13 && browGap < 0.00) { scores.sad += 12; }
             // Minimal facial movement - subtle/quiet sadness
-            const lowMovement = Math.abs(delta.ear) < 0.008 && Math.abs(delta.mar) < 0.008 && Math.abs(delta.smile) < 0.006;
             if (lowMovement && avgEAR < 0.17) { scores.sad += 18; }
 
             // If strong sad indicators present, reduce neutral score slightly to avoid misclassifying as neutral
@@ -396,6 +429,11 @@
             if (sadIndicators >= 2) { scores.neutral = Math.max(0, scores.neutral - 10); }
             if (MAR > 0.28 && avgEAR > 0.25) { scores.surprised += 10; }
             if (MAR < 0.18 && Math.abs(browGap) < 0.010) { scores.focused += 16; scores.calm += 8; }
+
+            // persist sadness smoothing for next frame
+            if (!cls) var cls = {};
+            // attach sadnessSmoothed into prev-like structure
+            // (we'll create cls after sorting entries)
 
             const entries = Object.entries(scores).map(([k,v]) => [k, Math.max(0, v)]);
             entries.sort((a, b) => b[1] - a[1]);
@@ -414,7 +452,10 @@
 
             const top = probabilities.slice(0, 3);
             const mood = entries[0][0];
-            return { mood, confidence, top, scores, probabilities };
+            const result = { mood, confidence, top, scores, probabilities };
+            // include sadnessSmoothed in result to be used by caller for UI/logging
+            result.sadnessSmoothed = typeof sadSmoothed !== 'undefined' ? sadSmoothed : null;
+            return result;
         }
 
         function drawLandmarks(landmarks, videoWidth, videoHeight, moodTextValue, confidenceValue, metrics, moodKey) {
@@ -483,6 +524,26 @@
                     ctx.beginPath(); ctx.arc(lm.x, lm.y, 4, 0, 2 * Math.PI); ctx.fill();
                 }
             });
+
+            // Optional: highlight key regions more strongly when sadness is detected
+            if (metrics && metrics.mouthCornerLift != null && moodKey === 'sad') {
+                const sadVizStrength = Math.min(1, Math.max(0, (metrics.mouthCornerLift < 0 ? (-metrics.mouthCornerLift*8) : 0)) );
+                const ringColor = 'rgba(59,130,246,' + (0.55 * (0.4 + sadVizStrength)) + ')';
+                ctx.strokeStyle = ringColor;
+                ctx.lineWidth = 3;
+                // eyes
+                [159,145,386,374].forEach(idx => {
+                    if (landmarks[idx]) {
+                        ctx.beginPath(); ctx.arc(landmarks[idx].x, landmarks[idx].y, 10, 0, 2*Math.PI); ctx.stroke();
+                    }
+                });
+                // mouth corners
+                [61,291].forEach(idx => {
+                    if (landmarks[idx]) {
+                        ctx.beginPath(); ctx.arc(landmarks[idx].x, landmarks[idx].y, 10, 0, 2*Math.PI); ctx.stroke();
+                    }
+                });
+            }
         }
 
         function updateDebug(metrics, cls, frameTimeMs) {
@@ -490,6 +551,7 @@
                 return;
             }
 
+            const sadnessLine = (cls.sadnessSmoothed != null) ? ('sadScore: ' + cls.sadnessSmoothed) : '';
             const lines = [
                 'frames: ' + frameIndex,
                 'mood: ' + cls.mood + ' (' + cls.confidence + '%)',
@@ -498,6 +560,7 @@
                 'smile: ' + metrics.smile.toFixed(3),
                 'brow: ' + metrics.browGap.toFixed(3),
                 'jaw: ' + metrics.jawTension.toFixed(3),
+                sadnessLine,
                 'latency: ' + frameTimeMs.toFixed(1) + 'ms'
             ];
             debugStats.textContent = lines.join(' · ');
@@ -599,7 +662,13 @@
                 const nowMood = key;
                 const prevShown = displayedMood;
                 // Only switch recommendations when confidence is reasonably high to avoid churn
-                if (nowMood !== prevShown && cls.confidence >= 28) {
+                // If sadness smoothing present, attach into lastMoodState for next-frame smoothing
+                if (cls.sadnessSmoothed != null) {
+                    lastMoodState = lastMoodState || {};
+                    lastMoodState.sadnessSmoothed = cls.sadnessSmoothed;
+                }
+
+                if (nowMood !== prevShown && cls.confidence >= 22) {
                     console.log('Detected mood change:', nowMood, 'confidence:', cls.confidence);
                     updateMoodRecommendations(nowMood, cls);
                 }
