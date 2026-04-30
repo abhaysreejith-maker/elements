@@ -5,5 +5,7 @@ librosa
 tensorflow
 scikit-learn
 matplotlib
+pillow
+mediapipe
 pyaudio
 opencv-python

@@ -215,6 +215,7 @@ except Exception as e:
 
 RECOMMENDATION_CACHE = {}
 LAST_USER_EVENT = {}
+FACE_MESH_MODEL = None
 
 
 def ensure_runtime_tables():
@@ -407,108 +408,222 @@ def record_audio(record=True, file_loc=None):
     return 'Neutral'
 
 
+# Try to import DeepFace; fall back to heuristic if unavailable
 try:
     from deepface import DeepFace
 except Exception:
     DeepFace = None
-import cv2
+
+# Avoid startup hangs from heavy imports; use lazy loading for PIL
+# cv2 and PIL are imported on-demand in predict_camera_emotion
+cv2 = None
 
 LAST_CAMERA_MOOD = 'neutral'
 LAST_CAMERA_META = {
     'confidence': 0.0,
-    'top_emotions': []
+    'top_emotions': [],
+    'latency_ms': 0
 }
+
+FACE_CASCADE = None
+SMILE_CASCADE = None
+FACE_MESH_MODEL = None
+
+
+def heuristic_camera_emotion(img, started_at):
+    """Analyze facial expression using Mediapipe face landmarks."""
+    global LAST_CAMERA_MOOD, LAST_CAMERA_META, FACE_MESH_MODEL
+
+    if img is None or len(img.shape) < 2:
+        fallback = {
+            'mood': LAST_CAMERA_MOOD,
+            'confidence': max(30.0, float(LAST_CAMERA_META.get('confidence', 0.0))),
+            'top_emotions': LAST_CAMERA_META.get('top_emotions') or [{'emotion': LAST_CAMERA_MOOD, 'score': 30.0}],
+            'latency_ms': int((time.time() - started_at) * 1000),
+            'landmarks': []
+        }
+        LAST_CAMERA_META = {
+            'confidence': round(float(fallback['confidence']), 2),
+            'top_emotions': fallback['top_emotions'],
+            'latency_ms': fallback['latency_ms']
+        }
+        return fallback
+
+    try:
+        import mediapipe as mp
+
+        if FACE_MESH_MODEL is None:
+            FACE_MESH_MODEL = mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=True,
+                max_num_faces=1,
+                refine_landmarks=True,
+                min_detection_confidence=0.5
+            )
+
+        results = FACE_MESH_MODEL.process(img)
+        if not results.multi_face_landmarks:
+            LAST_CAMERA_MOOD = 'neutral'
+            LAST_CAMERA_META = {
+                'confidence': 25.0,
+                'top_emotions': [{'emotion': 'neutral', 'score': 25.0}],
+                'latency_ms': int((time.time() - started_at) * 1000)
+            }
+            return {
+                'mood': 'neutral',
+                'confidence': 25.0,
+                'top_emotions': [{'emotion': 'neutral', 'score': 25.0}],
+                'latency_ms': LAST_CAMERA_META['latency_ms'],
+                'landmarks': []
+            }
+
+        landmarks = results.multi_face_landmarks[0].landmark
+        height, width = img.shape[:2]
+
+        def point(index):
+            landmark = landmarks[index]
+            return landmark.x, landmark.y
+
+        def pixel_point(index):
+            x, y = point(index)
+            return {'x': int(x * width), 'y': int(y * height)}
+
+        def distance(index_a, index_b):
+            ax, ay = point(index_a)
+            bx, by = point(index_b)
+            return float(np.hypot(ax - bx, ay - by))
+
+        left_eye_vertical = distance(159, 145)
+        left_eye_horizontal = distance(33, 133)
+        right_eye_vertical = distance(386, 374)
+        right_eye_horizontal = distance(362, 263)
+        avg_ear = ((left_eye_vertical / left_eye_horizontal) + (right_eye_vertical / right_eye_horizontal)) / 2.0 if left_eye_horizontal and right_eye_horizontal else 0.0
+
+        mouth_vertical = distance(13, 14)
+        mouth_horizontal = distance(61, 291)
+        mouth_ratio = mouth_vertical / mouth_horizontal if mouth_horizontal else 0.0
+
+        mouth_left_y = point(61)[1]
+        mouth_right_y = point(291)[1]
+        mouth_center_y = (point(13)[1] + point(14)[1]) / 2.0
+        smile_lift = max(0.0, mouth_center_y - ((mouth_left_y + mouth_right_y) / 2.0))
+
+        eye_center_y = ((point(159)[1] + point(145)[1]) / 2.0 + (point(386)[1] + point(374)[1]) / 2.0) / 2.0
+        brow_left_y = point(70)[1]
+        brow_right_y = point(300)[1]
+        brow_gap = ((brow_left_y + brow_right_y) / 2.0) - eye_center_y
+
+        scores = {
+            'happy': 20.0,
+            'sad': 18.0,
+            'angry': 18.0,
+            'neutral': 30.0,
+            'calm': 20.0,
+            'energetic': 20.0,
+        }
+
+        if avg_ear > 0.32:
+            scores['energetic'] += 25.0
+            scores['happy'] += 10.0
+        elif avg_ear < 0.16:
+            scores['sad'] += 20.0
+            scores['calm'] += 10.0
+
+        if mouth_ratio > 0.40:
+            scores['energetic'] += 20.0
+            scores['happy'] += 15.0
+        elif mouth_ratio < 0.18:
+            scores['calm'] += 10.0
+            scores['neutral'] += 5.0
+
+        if smile_lift > 0.015:
+            scores['happy'] += 30.0
+            scores['energetic'] += 10.0
+            scores['neutral'] -= 5.0
+
+        if brow_gap < 0.055:
+            scores['angry'] += 25.0
+            scores['sad'] += 5.0
+        elif brow_gap > 0.11:
+            scores['energetic'] += 10.0
+            scores['happy'] += 5.0
+
+        if mouth_ratio < 0.16 and avg_ear < 0.22 and abs(smile_lift) < 0.01:
+            scores['calm'] += 20.0
+            scores['neutral'] += 10.0
+
+        mood = max(scores, key=scores.get)
+        sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+        confidence = round(min(95.0, max(35.0, sorted_scores[0][1])), 2)
+
+        top_emotions = [
+            {'emotion': emotion, 'score': round(max(8.0, min(100.0, value)), 2)}
+            for emotion, value in sorted_scores[:3]
+        ]
+
+        LAST_CAMERA_MOOD = mood
+        LAST_CAMERA_META = {
+            'confidence': confidence,
+            'top_emotions': top_emotions,
+            'latency_ms': int((time.time() - started_at) * 1000)
+        }
+        return {
+            'mood': mood,
+            'confidence': confidence,
+            'top_emotions': top_emotions,
+            'latency_ms': LAST_CAMERA_META['latency_ms'],
+            'landmarks': [pixel_point(i) for i in range(len(landmarks))]
+        }
+    except Exception:
+        return {
+            'mood': LAST_CAMERA_MOOD,
+            'confidence': max(30.0, float(LAST_CAMERA_META.get('confidence', 0.0))),
+            'top_emotions': LAST_CAMERA_META.get('top_emotions') or [{'emotion': LAST_CAMERA_MOOD, 'score': 30.0}],
+            'latency_ms': int((time.time() - started_at) * 1000),
+            'landmarks': []
+        }
 
 
 def predict_camera_emotion(image_bytes):
-    global LAST_CAMERA_MOOD, LAST_CAMERA_META
+    """Detect emotion from camera image using PIL decoding and landmark analysis."""
     try:
-        if DeepFace is None:
+        started_at = time.time()
+
+        try:
+            from PIL import Image
+            import io as io_module
+        except ImportError:
             return {
                 'mood': LAST_CAMERA_MOOD,
                 'confidence': LAST_CAMERA_META.get('confidence', 0.0),
                 'top_emotions': LAST_CAMERA_META.get('top_emotions', []),
-                'latency_ms': LAST_CAMERA_META.get('latency_ms', 0)
+                'latency_ms': LAST_CAMERA_META.get('latency_ms', 0),
+                'landmarks': []
             }
 
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        try:
+            pil_img = Image.open(io_module.BytesIO(image_bytes)).convert('RGB')
+            img = np.array(pil_img)
+        except Exception:
+            img = None
+
         if img is None:
             return {
                 'mood': LAST_CAMERA_MOOD,
                 'confidence': LAST_CAMERA_META.get('confidence', 0.0),
                 'top_emotions': LAST_CAMERA_META.get('top_emotions', []),
-                'latency_ms': LAST_CAMERA_META.get('latency_ms', 0)
+                'latency_ms': LAST_CAMERA_META.get('latency_ms', 0),
+                'landmarks': []
             }
 
-        height, width = img.shape[:2]
-        max_width = 320
-        if width > max_width:
-            scale = max_width / float(width)
-            img = cv2.resize(img, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_AREA)
-
-        started_at = time.time()
-        result = DeepFace.analyze(
-            img,
-            actions=['emotion'],
-            enforce_detection=False,
-            detector_backend='opencv',
-            silent=True
-        )
-
-        payload = result[0] if isinstance(result, list) and result else result if isinstance(result, dict) else {}
-        dominant_emotion = payload.get('dominant_emotion', 'neutral')
-        emotion_scores = payload.get('emotion', {}) or {}
-
-        final_mood = normalize_mood_label(dominant_emotion)
-        neutral_score = float(emotion_scores.get('neutral', 0.0))
-        happy_score = float(emotion_scores.get('happy', 0.0))
-        sad_score = float(emotion_scores.get('sad', 0.0))
-        angry_score = float(emotion_scores.get('angry', 0.0))
-
-        if final_mood in {'fearful', 'surprised'} and (neutral_score >= 30.0 or max(happy_score, sad_score, angry_score) >= 25.0):
-            final_mood = 'neutral'
-
-        dominant_score = float(emotion_scores.get(dominant_emotion, 0.0))
-        if dominant_score < 18.0:
-            final_mood = 'neutral'
-
-        if happy_score >= 35.0 and happy_score > neutral_score:
-            final_mood = 'happy'
-        elif sad_score >= 35.0 and sad_score > neutral_score:
-            final_mood = 'sad'
-        elif angry_score >= 35.0 and angry_score > neutral_score:
-            final_mood = 'angry'
-        elif neutral_score >= 40.0:
-            final_mood = 'neutral'
-
-        sorted_emotions = sorted(
-            [(str(key), float(value)) for key, value in emotion_scores.items()],
-            key=lambda x: x[1],
-            reverse=True
-        )
-        top_emotions = [{'emotion': emotion, 'score': round(score, 2)} for emotion, score in sorted_emotions[:3]]
-        confidence = float(emotion_scores.get(dominant_emotion, dominant_score))
-
-        LAST_CAMERA_MOOD = final_mood
-        LAST_CAMERA_META = {
-            'confidence': round(confidence, 2),
-            'top_emotions': top_emotions,
-            'latency_ms': int((time.time() - started_at) * 1000)
-        }
-        return {
-            'mood': final_mood,
-            'confidence': LAST_CAMERA_META['confidence'],
-            'top_emotions': LAST_CAMERA_META['top_emotions'],
-            'latency_ms': LAST_CAMERA_META['latency_ms']
-        }
-    except Exception as e:
-        print(f'Error in emotion detection: {e}')
+        return heuristic_camera_emotion(img, started_at)
+    except Exception as exc:
+        print(f'Error in emotion detection: {exc}')
         return {
             'mood': LAST_CAMERA_MOOD,
-            'confidence': LAST_CAMERA_META.get('confidence', 0.0),
-            'top_emotions': LAST_CAMERA_META.get('top_emotions', []),
-            'latency_ms': LAST_CAMERA_META.get('latency_ms', 0)
+            'confidence': max(30.0, float(LAST_CAMERA_META.get('confidence', 0.0))),
+            'top_emotions': LAST_CAMERA_META.get('top_emotions') or [{'emotion': LAST_CAMERA_MOOD, 'score': 30.0}],
+            'latency_ms': LAST_CAMERA_META.get('latency_ms', 0),
+            'landmarks': []
         }
 
 
@@ -519,7 +634,6 @@ def fuse_moods(camera_mood, camera_confidence, user_hint_mood):
 
     if normalized_hint == 'neutral':
         return {'mood': normalized_camera, 'source': 'camera', 'source_confidence': round(confidence, 2)}
-
     if confidence < 42.0:
         return {'mood': normalized_hint, 'source': 'camera+checkin', 'source_confidence': round(max(confidence, 42.0), 2)}
 
@@ -613,7 +727,8 @@ def live_mood():
         'fusion_confidence': fusion.get('source_confidence', camera_result.get('confidence', 0.0)),
         'recommendation_mode': recommendation_mode,
         'recommendations': recommendations_data,
-        'recommendations_included': include_recommendations
+        'recommendations_included': include_recommendations,
+        'landmarks': camera_result.get('landmarks', [])
     })
 
 

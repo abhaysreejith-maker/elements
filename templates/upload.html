@@ -3,30 +3,86 @@
 {% block title %}Upload{% endblock %}
 
 {% block content %}
-<section class="rounded-3xl border border-white/70 bg-white/85 p-6 shadow-xl sm:p-8">
-    <div class="flex flex-wrap items-end justify-between gap-4">
-        <div>
-            <p class="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-800">Live Mood Studio</p>
-            <h1 class="title-font mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">Analyze Your Mood</h1>
-            <p class="mt-2 max-w-2xl text-slate-600">Use voice or live camera tracking to detect emotion and update recommendations continuously.</p>
-        </div>
-        <div class="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-            <span id="chip-camera" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Camera: Idle</span>
-            <span id="chip-face" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Face: Waiting</span>
-            <span id="chip-mood" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Mood: Neutral</span>
-            <span id="chip-stream" class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Network: Ready</span>
-        </div>
+<section class="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-xl sm:p-8">
+    <div class="max-w-3xl">
+        <p class="inline-flex rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-800">Mood Upload</p>
+        <h1 class="title-font mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">Live Camera and Voice Analysis</h1>
+        <p class="mt-2 text-slate-600">Use your camera for real-time mood detection, or upload a voice clip for file-based analysis.</p>
     </div>
 
     <div class="mt-8 grid gap-6 lg:grid-cols-2">
         <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="title-font text-2xl font-semibold text-slate-900">Voice Analysis</h2>
-            <p class="mt-2 text-sm text-slate-600">Upload audio for quick mood classification.</p>
+            <h2 class="title-font text-2xl font-semibold text-slate-900">Live Camera Mood</h2>
+            <p class="mt-2 text-sm text-slate-600">Allow camera access to get live mood updates and recommendations.</p>
 
-            <form id="moodForm" class="mt-5" enctype="multipart/form-data" method="POST" action="{{ url_for('upload') }}">
+            <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <div class="relative inline-block w-full">
+                <video id="cameraFeed" class="h-64 w-full bg-slate-900 object-cover sm:h-72" autoplay muted playsinline></video>
+                    <canvas id="landmarkOverlay" class="absolute top-0 left-0 rounded-2xl pointer-events-none" style="display: none;"></canvas>
+                </div>
+            </div>
+
+            <!-- Hidden canvas for processing -->
+            <canvas id="cameraCanvas" class="hidden"></canvas>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                <button id="startCameraBtn" type="button" class="rounded-xl bg-teal-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-600">Start Camera</button>
+                <button id="stopCameraBtn" type="button" class="rounded-xl bg-slate-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-600">Stop Camera</button>
+                <select id="recommendationMode" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-700">
+                    <option value="discover">Discover</option>
+                    <option value="familiar">Familiar</option>
+                    <option value="focus">Focus</option>
+                    <option value="chill">Chill</option>
+                </select>
+            </div>
+
+            <div id="cameraStatus" class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Camera is idle. Press Start Camera.
+            </div>
+
+            <div id="debugStats" class="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+                Debug metrics will appear here once the camera starts.
+            </div>
+
+            <div id="liveMoodCard" class="mt-4 hidden rounded-xl border-2 p-6" style="border-color: rgb(20, 184, 166); background-color: rgba(20, 184, 166, 0.05);">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-5xl mb-2" id="liveMoodEmoji">😐</div>
+                        <div class="text-sm text-slate-600">Detected Mood</div>
+                        <div class="text-3xl font-bold text-slate-900 mt-1" id="liveMoodText">Neutral</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-slate-600">Confidence</div>
+                        <div class="text-2xl font-bold" id="liveConfidenceText">0</div>
+                        <div class="text-xs text-slate-600">%</div>
+                    </div>
+                </div>
+
+                <!-- Confidence bar -->
+                <div class="mt-4">
+                    <div class="relative h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div id="confidenceBar" class="h-full rounded-full bg-teal-700 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Top emotions breakdown -->
+                <div class="mt-4 space-y-2">
+                    <div class="text-xs font-semibold text-slate-700 uppercase">Emotion Breakdown</div>
+                    <div id="topEmotionsContainer" class="space-y-1">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="title-font text-2xl font-semibold text-slate-900">Voice Analysis</h2>
+            <p class="mt-2 text-sm text-slate-600">Accepted formats: MP3, WAV, OGG, FLAC.</p>
+
+            <form class="mt-5" enctype="multipart/form-data" method="POST" action="{{ url_for('upload') }}">
                 <label for="audioInput" class="block cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-teal-500 hover:bg-teal-50">
                     <span class="block text-sm font-semibold text-slate-700">Drop audio or click to browse</span>
-                    <span class="mt-1 block text-xs text-slate-500">MP3, WAV, OGG, FLAC</span>
+                    <span class="mt-1 block text-xs text-slate-500">Choose a single local audio file</span>
                     <input id="audioInput" name="audio" type="file" class="sr-only" accept="audio/*" required>
                 </label>
                 <button type="submit" class="mt-4 w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400">Analyze Audio</button>
@@ -41,590 +97,408 @@
             {% endif %}
         </article>
 
-        <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="title-font text-2xl font-semibold text-slate-900">Live Camera Capture</h2>
-            <p class="mt-2 text-sm text-slate-600">Real-time facial landmarks, mood label, and recommendation refresh.</p>
+        <aside class="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm lg:col-span-2">
+            <h2 class="title-font text-2xl font-semibold text-slate-900">Recommendations</h2>
+            <p class="mt-2 text-sm text-slate-600">Results appear here after upload or live camera detection.</p>
 
-            <button id="startCamera" type="button" class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Start Camera</button>
-
-            <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                    Response Speed
-                    <select id="responseProfile" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800">
-                        <option value="fast">Fast</option>
-                        <option value="balanced" selected>Balanced</option>
-                        <option value="stable">Stable</option>
-                    </select>
-                </label>
-                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold uppercase tracking-wider text-slate-600">
-                    Recommendation Mode
-                    <select id="recommendationMode" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800">
-                        <option value="discover" selected>Discover</option>
-                        <option value="familiar">Familiar</option>
-                        <option value="focus">Focus</option>
-                        <option value="chill">Chill</option>
-                    </select>
-                </label>
-                <label class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs font-semibold uppercase tracking-wider text-slate-600 sm:col-span-2">
-                    Quick Mood Check-in (optional)
-                    <select id="moodCheckin" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800">
-                        <option value="neutral" selected>No check-in</option>
-                        <option value="happy">Happy</option>
-                        <option value="sad">Sad</option>
-                        <option value="angry">Angry</option>
-                        <option value="fearful">Fearful</option>
-                        <option value="surprised">Surprised</option>
-                        <option value="disgust">Disgust</option>
-                    </select>
-                </label>
+            <div id="recommendationsList" class="mt-4 space-y-3">
+            {% if recommendations %}
+                {% for song in recommendations %}
+                <article class="rounded-xl border border-slate-200 bg-white p-4">
+                    <h3 class="font-semibold text-slate-900">{{ song.name }}</h3>
+                    <p class="text-sm text-slate-600">{{ song.artist }}</p>
+                    <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-teal-700">{{ song.mode or 'discover' }} · {{ song.time_bucket or 'anytime' }}</p>
+                </article>
+                {% endfor %}
+            {% else %}
+            <div class="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                Start camera or upload a file to see suggestions.
             </div>
-
-            <div id="camera-container" class="mt-4 hidden overflow-hidden rounded-2xl border border-slate-200 bg-slate-900" style="position: relative;">
-                <video id="camera-feed" class="w-full" autoplay playsinline style="display: block;"></video>
-                <canvas id="overlay-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></canvas>
-                <div id="mood-display" class="absolute left-3 top-3 rounded-xl bg-black/55 px-3 py-2 text-sm font-bold text-white" style="z-index: 20;">Mood: Neutral</div>
-                <div id="mood-stats" class="absolute left-3 top-16 rounded-xl bg-black/60 px-3 py-2 text-xs font-semibold text-white" style="z-index: 20;">Frames: 0</div>
+            {% endif %}
             </div>
-
-            <div class="mt-4">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Mood Timeline</p>
-                <div id="mood-timeline" class="flex min-h-[34px] flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2"></div>
-            </div>
-
-            <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Explainability</p>
-                    <p id="mood-confidence" class="mt-2 text-sm font-semibold text-slate-800">Confidence: 0%</p>
-                    <p id="mood-top-emotions" class="mt-1 text-xs text-slate-600">Top signals: -</p>
-                    <p id="mood-latency" class="mt-1 text-xs text-slate-500">Inference: - ms</p>
-                    <p id="mood-fusion" class="mt-1 text-xs text-slate-500">Source: camera</p>
-                </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Session Insights</p>
-                    <p id="session-dominant" class="mt-2 text-sm font-semibold text-slate-800">Dominant mood: Neutral</p>
-                    <p id="session-switches" class="mt-1 text-xs text-slate-600">Mood switches: 0</p>
-                    <p id="session-accuracy" class="mt-1 text-xs text-slate-600">Feedback: 0 matches, 0 mismatches</p>
-                </div>
-            </div>
-        </article>
+        </aside>
     </div>
-
-    <section id="recommendations-container" class="mt-6 hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-3">
-            <h3 class="title-font text-2xl font-semibold text-slate-900">Recommended Songs</h3>
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Updates when mood stabilizes</p>
-        </div>
-        <div class="mt-3 flex flex-wrap gap-2">
-            <button id="feedback-match" type="button" class="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">This matches my mood</button>
-            <button id="feedback-mismatch" type="button" class="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Not accurate</button>
-            <button id="save-set" type="button" class="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700">Save current set</button>
-            <button id="share-card" type="button" class="rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700">Share mood card</button>
-        </div>
-        <p id="feedback-status" class="mt-2 text-xs text-slate-500"></p>
-        <div id="recommendations-list" class="mt-4 grid gap-3 sm:grid-cols-2"></div>
-    </section>
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-<script async src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+<!-- MediaPipe CDN scripts for real-time face mesh -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 <script>
-const appState = {
-    currentMood: 'neutral',
-    previousMood: 'neutral',
-    moodHistory: [],
-    moodBuffer: [],
-    backendMoodBuffer: [],
-    lastBackendMoodAt: 0,
-    lastRecommendationMood: 'neutral',
-    lastRecommendationAt: 0,
-    moodSwitches: 0,
-    feedback: { match: 0, mismatch: 0 },
-    responseProfile: 'balanced',
-    recommendationMode: 'discover',
-    pollMs: 500,
-    bufferSize: 5,
-    lastRecommendations: [],
-    frameCount: 0,
-    animationTime: 0,
-    landmarks: null,
-    camera: null,
-    streamTimer: null
-};
+    (function () {
+        const video = document.getElementById('cameraFeed');
+        const canvas = document.getElementById('cameraCanvas');
+        const startBtn = document.getElementById('startCameraBtn');
+        const stopBtn = document.getElementById('stopCameraBtn');
+        const modeSelect = document.getElementById('recommendationMode');
+        const statusEl = document.getElementById('cameraStatus');
+        const moodCard = document.getElementById('liveMoodCard');
+        const moodText = document.getElementById('liveMoodText');
+        const moodEmoji = document.getElementById('liveMoodEmoji');
+        const confidenceText = document.getElementById('liveConfidenceText');
+        const confidenceBar = document.getElementById('confidenceBar');
+        const topEmotionsContainer = document.getElementById('topEmotionsContainer');
+        const recommendationsList = document.getElementById('recommendationsList');
 
-const moodColors = {
-    happy: { primary: '#16a34a', glow: 'rgba(22, 163, 74, 0.4)' },
-    sad: { primary: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.4)' },
-    angry: { primary: '#ef4444', glow: 'rgba(239, 68, 68, 0.4)' },
-    disgust: { primary: '#7c3aed', glow: 'rgba(124, 58, 237, 0.4)' },
-    neutral: { primary: '#eab308', glow: 'rgba(234, 179, 8, 0.4)' },
-    surprised: { primary: '#06b6d4', glow: 'rgba(6, 182, 212, 0.4)' },
-    fearful: { primary: '#ec4899', glow: 'rgba(236, 72, 153, 0.4)' }
-};
+        const moodConfig = {
+            'happy': { emoji: '😊', color: 'rgb(34, 197, 94)', borderColor: 'rgb(22, 163, 74)', bgColor: 'rgba(34, 197, 94, 0.05)' },
+            'sad': { emoji: '😢', color: 'rgb(59, 130, 246)', borderColor: 'rgb(37, 99, 235)', bgColor: 'rgba(59, 130, 246, 0.05)' },
+            'angry': { emoji: '😠', color: 'rgb(239, 68, 68)', borderColor: 'rgb(220, 38, 38)', bgColor: 'rgba(239, 68, 68, 0.05)' },
+            'neutral': { emoji: '😐', color: 'rgb(107, 114, 128)', borderColor: 'rgb(75, 85, 99)', bgColor: 'rgba(107, 114, 128, 0.05)' },
+            'calm': { emoji: '😌', color: 'rgb(168, 85, 247)', borderColor: 'rgb(147, 51, 234)', bgColor: 'rgba(168, 85, 247, 0.05)' },
+            'focused': { emoji: '🧐', color: 'rgb(14, 165, 233)', borderColor: 'rgb(2, 132, 199)', bgColor: 'rgba(14, 165, 233, 0.05)' },
+            'surprised': { emoji: '😲', color: 'rgb(245, 158, 11)', borderColor: 'rgb(217, 119, 6)', bgColor: 'rgba(245, 158, 11, 0.05)' },
+            'energetic': { emoji: '🤩', color: 'rgb(249, 115, 22)', borderColor: 'rgb(234, 88, 12)', bgColor: 'rgba(249, 115, 22, 0.05)' }
+        };
 
-const chipCamera = document.getElementById('chip-camera');
-const chipFace = document.getElementById('chip-face');
-const chipMood = document.getElementById('chip-mood');
-const chipStream = document.getElementById('chip-stream');
+        let mediaStream = null;
+        let mpCamera = null;
+        let faceMesh = null;
+        let lastServerSend = 0;
+        let frameIndex = 0;
+        let lastMoodState = null;
+        let debugEnabled = true;
+        
+        const landmarkOverlay = document.getElementById('landmarkOverlay');
+        const debugStats = document.getElementById('debugStats');
 
-function setChip(chip, text, active = false) {
-    chip.textContent = text;
-    chip.className = `rounded-full px-3 py-1 font-semibold ${active ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600'}`;
-}
-
-function normalizeMood(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    const moodMap = {
-        fear: 'fearful',
-        fearful: 'fearful',
-        surprise: 'surprised',
-        surprised: 'surprised',
-        happiness: 'happy',
-        happy: 'happy',
-        sadness: 'sad',
-        sad: 'sad',
-        anger: 'angry',
-        angry: 'angry',
-        disgust: 'disgust',
-        neutral: 'neutral'
-    };
-    return moodMap[raw] || 'neutral';
-}
-
-class MoodTrackerOverlay {
-    constructor() {
-        this.canvas = document.getElementById('overlay-canvas');
-        this.ctx = this.canvas.getContext('2d', { alpha: true });
-        this.video = document.getElementById('camera-feed');
-        this.moodDisplay = document.getElementById('mood-display');
-        this.moodStats = document.getElementById('mood-stats');
-        this.timeline = document.getElementById('mood-timeline');
-
-        this.faceMesh = new FaceMesh({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-        });
-
-        this.faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
-
-        this.faceMesh.onResults(this.onResults.bind(this));
-    }
-
-    calculateFaceScale(landmarks) {
-        const left = landmarks[33];
-        const right = landmarks[263];
-        return Math.max(Math.hypot(right.x - left.x, right.y - left.y), 0.001);
-    }
-
-    calculateEyeOpenness(landmarks, eyeIndices) {
-        const vertical = Math.hypot(
-            landmarks[eyeIndices[1]].x - landmarks[eyeIndices[5]].x,
-            landmarks[eyeIndices[1]].y - landmarks[eyeIndices[5]].y
-        );
-        const horizontal = Math.hypot(
-            landmarks[eyeIndices[0]].x - landmarks[eyeIndices[3]].x,
-            landmarks[eyeIndices[0]].y - landmarks[eyeIndices[3]].y
-        );
-        return vertical / Math.max(horizontal, 0.001);
-    }
-
-    calculateMouthOpenness(landmarks) {
-        const mouthTop = landmarks[13];
-        const mouthBottom = landmarks[14];
-        const faceScale = this.calculateFaceScale(landmarks);
-        const vertical = Math.hypot(mouthBottom.x - mouthTop.x, mouthBottom.y - mouthTop.y);
-        return vertical / faceScale;
-    }
-
-    calculateEyebrowRaise(landmarks) {
-        const faceScale = this.calculateFaceScale(landmarks);
-        const leftRaise = Math.max(0, (landmarks[159].y - landmarks[105].y) / faceScale);
-        const rightRaise = Math.max(0, (landmarks[386].y - landmarks[334].y) / faceScale);
-        return (leftRaise + rightRaise) / 2;
-    }
-
-    stabilizeMood(nextMood) {
-        appState.moodBuffer.push(nextMood);
-        if (appState.moodBuffer.length > 8) {
-            appState.moodBuffer.shift();
+        function toPixelLandmarks(landmarks) {
+            if (!landmarks) return [];
+            return landmarks.map(lm => ({ x: lm.x * video.videoWidth, y: lm.y * video.videoHeight }));
         }
 
-        const counts = appState.moodBuffer.reduce((acc, mood) => {
-            acc[mood] = (acc[mood] || 0) + 1;
-            return acc;
-        }, {});
-
-        return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || nextMood;
-    }
-
-    onResults(results) {
-        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.moodDisplay.textContent = 'No face detected';
-            setChip(chipFace, 'Face: Not detected', false);
-            appState.currentMood = 'neutral';
-            appState.moodBuffer = [];
-            return;
+        function getFaceBox(landmarks) {
+            const xs = landmarks.map(point => point.x);
+            const ys = landmarks.map(point => point.y);
+            const minX = Math.max(0, Math.min(...xs));
+            const maxX = Math.min(video.videoWidth, Math.max(...xs));
+            const minY = Math.max(0, Math.min(...ys));
+            const maxY = Math.min(video.videoHeight, Math.max(...ys));
+            return {
+                minX,
+                maxX,
+                minY,
+                maxY,
+                width: Math.max(1, maxX - minX),
+                height: Math.max(1, maxY - minY)
+            };
         }
 
-        const landmarks = results.multiFaceLandmarks[0];
-        appState.landmarks = landmarks;
-        if ((Date.now() - appState.lastBackendMoodAt) > 7000) {
-            appState.currentMood = 'neutral';
-        }
-        appState.moodHistory.push(appState.currentMood);
-        if (appState.moodHistory.length > 36) appState.moodHistory.shift();
-        appState.frameCount += 1;
-        appState.animationTime += 0.016;
+        function computeMetrics(landmarks, previousMetrics) {
+            // Use landmark indices consistent with MediaPipe
+            function d(a,b){return Math.hypot(landmarks[a].x - landmarks[b].x, landmarks[a].y - landmarks[b].y)}
+            const faceBox = getFaceBox(landmarks);
+            const faceScale = Math.max(faceBox.width, faceBox.height);
 
-        setChip(chipFace, 'Face: Detected', true);
-        this.drawOverlay(landmarks);
-    }
+            // Eyes
+            const leftEyeV = d(159,145); const leftEyeH = d(33,133);
+            const rightEyeV = d(386,374); const rightEyeH = d(362,263);
+            const avgEAR = ((leftEyeV/Math.max(leftEyeH, 0.0001)) + (rightEyeV/Math.max(rightEyeH, 0.0001)))/2 || 0;
+            // Mouth
+            const mouthV = d(13,14); const mouthH = d(61,291);
+            const MAR = mouthH ? (mouthV/mouthH) : 0;
+            // Smile: compare corners vs center
+            const mouthLeftY = landmarks[61].y; const mouthRightY = landmarks[291].y;
+            const mouthCenterY = (landmarks[13].y + landmarks[14].y)/2;
+            const smile = Math.max(0, (mouthCenterY - ((mouthLeftY + mouthRightY)/2)) / Math.max(faceScale, 1));
+            // Brow gap
+            const eyeCenterY = ((landmarks[159].y+landmarks[145].y)/2 + (landmarks[386].y+landmarks[374].y)/2)/2;
+            const browLeftY = landmarks[70].y; const browRightY = landmarks[300].y;
+            const browGap = (((browLeftY + browRightY)/2) - eyeCenterY) / Math.max(faceScale, 1);
 
-    drawPath(landmarks, indices, fillColor, strokeColor) {
-        this.ctx.beginPath();
-        indices.forEach((idx, i) => {
-            const x = landmarks[idx].x * this.canvas.width;
-            const y = landmarks[idx].y * this.canvas.height;
-            if (i === 0) this.ctx.moveTo(x, y);
-            else this.ctx.lineTo(x, y);
-        });
-        this.ctx.closePath();
-        if (fillColor) {
-            this.ctx.fillStyle = fillColor;
-            this.ctx.fill();
-        }
-        if (strokeColor) {
-            this.ctx.strokeStyle = strokeColor;
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-        }
-    }
+            const mouthCornerLift = ((mouthLeftY + mouthRightY) / 2 - mouthCenterY) / Math.max(faceScale, 1);
+            const jawLeft = landmarks[234];
+            const jawRight = landmarks[454];
+            const chin = landmarks[152];
+            const jawTension = (
+                Math.abs(jawLeft.y - chin.y) + Math.abs(jawRight.y - chin.y)
+            ) / Math.max(faceScale, 1);
 
-    drawOverlay(landmarks) {
-        const colors = moodColors[appState.currentMood] || moodColors.neutral;
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            const previous = previousMetrics || {};
+            const delta = {
+                ear: avgEAR - (previous.avgEAR || avgEAR),
+                mar: MAR - (previous.MAR || MAR),
+                smile: smile - (previous.smile || smile),
+                browGap: browGap - (previous.browGap || browGap),
+                jawTension: jawTension - (previous.jawTension || jawTension)
+            };
 
-        this.drawPath(landmarks, [33, 7, 163, 144, 145, 153, 154, 155], 'rgba(255,255,255,0.1)', colors.primary);
-        this.drawPath(landmarks, [362, 382, 381, 380, 374, 373, 390, 249], 'rgba(255,255,255,0.1)', colors.primary);
-        this.drawPath(landmarks, [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291], colors.glow, colors.primary);
-
-        const nose = landmarks[1];
-        const x = nose.x * this.canvas.width;
-        const y = nose.y * this.canvas.height;
-        const radius = 4 + (Math.sin(appState.animationTime * 2) + 1.2);
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-        this.ctx.fillStyle = colors.primary;
-        this.ctx.fill();
-
-        this.updateMoodDisplay(colors);
-    }
-
-    stabilizeBackendMood(nextMood) {
-        appState.backendMoodBuffer.push(nextMood);
-        if (appState.backendMoodBuffer.length > appState.bufferSize) {
-            appState.backendMoodBuffer.shift();
+            return {avgEAR, MAR, smile, browGap, jawTension, faceScale, delta};
         }
 
-        const counts = appState.backendMoodBuffer.reduce((acc, mood) => {
-            acc[mood] = (acc[mood] || 0) + 1;
-            return acc;
-        }, {});
+        function classifyMood(metrics, previousState) {
+            // Base scores - equal starting point so neutral isn't privileged
+            const scores = {happy:14, sad:14, angry:14, surprised:14, neutral:14, calm:14, focused:14};
+            const {avgEAR, MAR, smile, browGap, jawTension, delta} = metrics;
+            const prev = previousState || { mood: 'neutral', confidence: 0, scores: scores };
 
-        return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || nextMood;
-    }
+            // Lightweight temporal smoothing: remember prior state but keep it responsive.
+            const momentum = 0.22;
+            if (prev.scores) {
+                Object.keys(scores).forEach(key => {
+                    scores[key] = scores[key] * (1 - momentum) + prev.scores[key] * momentum;
+                });
+            }
 
-    updateMoodDisplay(colors) {
-        const moodLabel = appState.currentMood.charAt(0).toUpperCase() + appState.currentMood.slice(1);
-        this.moodDisplay.textContent = `Mood: ${moodLabel}`;
-        this.moodDisplay.style.color = colors.primary;
-        this.moodDisplay.style.textShadow = `0 0 8px ${colors.glow}`;
-        this.moodStats.textContent = `Frames: ${appState.frameCount}`;
+            // Eye openness: smaller changes should matter.
+            if (avgEAR > 0.30 || delta.ear > 0.03) { scores.surprised += 38; scores.happy += 18; }
+            else if (avgEAR > 0.24 || delta.ear > 0.015) { scores.happy += 22; scores.surprised += 10; }
+            else if (avgEAR < 0.10 || delta.ear < -0.02) { scores.sad += 28; scores.calm += 14; }
+            else if (avgEAR < 0.14) { scores.sad += 18; scores.calm += 10; }
 
-        setChip(chipMood, `Mood: ${moodLabel}`, true);
-        this.renderTimeline();
-    }
+            // Mouth openness and lip curvature
+            if (MAR > 0.34 || delta.mar > 0.02) { scores.surprised += 30; scores.happy += 16; }
+            if (MAR > 0.22) { scores.happy += 16; scores.energetic += 8; }
+            if (MAR < 0.16) { scores.calm += 12; scores.focused += 10; }
+            if (smile > 0.012 || delta.smile > 0.004) { scores.happy += 32; scores.energetic += 15; }
+            if (smile > 0.020) { scores.happy += 18; }
+            if (smile < -0.008 || delta.smile < -0.004) { scores.sad += 16; }
 
-    renderTimeline() {
-        this.timeline.innerHTML = appState.moodHistory.slice(-24).map((mood) => {
-            const c = moodColors[mood] || moodColors.neutral;
-            return `<span title="${mood}" style="background:${c.primary}" class="inline-block h-4 w-2 rounded-sm"></span>`;
-        }).join('');
-    }
+            // Eyebrows / anger / focus
+            if (browGap < -0.018 || delta.browGap < -0.004) { scores.angry += 28; scores.focused += 10; }
+            if (browGap < -0.008) { scores.angry += 14; }
+            if (browGap > 0.020) { scores.surprised += 18; scores.happy += 8; }
 
-    resizeCanvas() {
-        const rect = this.canvas.parentElement.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-    }
+            // Jaw tension: helps separate focus/calm/anger.
+            if (jawTension > 0.085 || delta.jawTension > 0.01) { scores.angry += 10; scores.focused += 12; }
+            if (jawTension < 0.045) { scores.calm += 12; }
 
-    start() {
-        this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+            // Combined conditions for small but meaningful expressions.
+            if (avgEAR > 0.22 && smile > 0.010) { scores.happy += 18; }
+            if (avgEAR < 0.13 && browGap < 0.00) { scores.sad += 12; }
+            if (MAR > 0.28 && avgEAR > 0.25) { scores.surprised += 10; }
+            if (MAR < 0.18 && Math.abs(browGap) < 0.010) { scores.focused += 16; scores.calm += 8; }
 
-        const camera = new Camera(this.video, {
-            onFrame: async () => {
-                await this.faceMesh.send({ image: this.video });
-            },
-            width: 960,
-            height: 540
-        });
+            const entries = Object.entries(scores).map(([k,v]) => [k, Math.max(0, v)]);
+            entries.sort((a, b) => b[1] - a[1]);
 
-        camera.start();
-        appState.camera = camera;
-    }
-}
+            const maxScore = entries[0][1];
+            const secondScore = entries[1][1];
+            const margin = maxScore - secondScore;
+            const confidence = Math.round(Math.min(96, Math.max(20, margin * 1.4 + 34)));
 
-const startCameraButton = document.getElementById('startCamera');
-const cameraContainer = document.getElementById('camera-container');
-const cameraFeed = document.getElementById('camera-feed');
-const recommendationsContainer = document.getElementById('recommendations-container');
-const recommendationsList = document.getElementById('recommendations-list');
-const responseProfileSelect = document.getElementById('responseProfile');
-const recommendationModeSelect = document.getElementById('recommendationMode');
-const moodCheckinSelect = document.getElementById('moodCheckin');
-const moodConfidence = document.getElementById('mood-confidence');
-const moodTopEmotions = document.getElementById('mood-top-emotions');
-const moodLatency = document.getElementById('mood-latency');
-const moodFusion = document.getElementById('mood-fusion');
-const sessionDominant = document.getElementById('session-dominant');
-const sessionSwitches = document.getElementById('session-switches');
-const sessionAccuracy = document.getElementById('session-accuracy');
-const feedbackStatus = document.getElementById('feedback-status');
-const feedbackMatchButton = document.getElementById('feedback-match');
-const feedbackMismatchButton = document.getElementById('feedback-mismatch');
-const saveSetButton = document.getElementById('save-set');
-const shareCardButton = document.getElementById('share-card');
-let cameraStream = null;
-let overlay = null;
+            const normalized = entries.map(([emotion, value]) => [emotion, Math.max(0.01, value)]);
+            const total = normalized.reduce((sum, [, value]) => sum + value, 0);
+            const probabilities = normalized.map(([emotion, value]) => ({
+                emotion,
+                score: Math.round((value / total) * 100)
+            }));
 
-function renderRecommendations(recommendations) {
-    if (!recommendations || recommendations.length === 0) {
-        recommendationsList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">No recommendations yet.</div>';
-        return;
-    }
-
-    recommendationsList.innerHTML = recommendations.map((song) => `
-        <article class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-teal-300 hover:bg-teal-50">
-            <h4 class="font-semibold text-slate-900">${song.name}</h4>
-            <p class="text-sm text-slate-600">${song.artist}</p>
-            <p class="mt-2 text-xs font-semibold uppercase tracking-wider text-teal-700">${song.mode || 'discover'} • ${song.time_bucket || 'anytime'}</p>
-        </article>
-    `).join('');
-}
-
-function applyResponseProfile(profile) {
-    const profiles = {
-        fast: { pollMs: 350, bufferSize: 3 },
-        balanced: { pollMs: 500, bufferSize: 5 },
-        stable: { pollMs: 800, bufferSize: 8 }
-    };
-    const selected = profiles[profile] || profiles.balanced;
-    appState.responseProfile = profile;
-    appState.pollMs = selected.pollMs;
-    appState.bufferSize = selected.bufferSize;
-    if (overlay) {
-        appState.backendMoodBuffer = appState.backendMoodBuffer.slice(-appState.bufferSize);
-    }
-}
-
-function updateExplainability(data) {
-    const confidence = Number(data.confidence || 0);
-    const top = Array.isArray(data.top_emotions) ? data.top_emotions : [];
-    const topText = top.length
-        ? top.map((item) => `${item.emotion} ${Number(item.score || 0).toFixed(0)}%`).join(', ')
-        : '-';
-
-    moodConfidence.textContent = `Confidence: ${confidence.toFixed(0)}%`;
-    moodTopEmotions.textContent = `Top signals: ${topText}`;
-    moodLatency.textContent = `Inference: ${Number(data.latency_ms || 0)} ms`;
-    const source = String(data.fusion_source || 'camera').replace('+', ' + ');
-    const sourceConfidence = Number(data.fusion_confidence || confidence);
-    moodFusion.textContent = `Source: ${source} (${sourceConfidence.toFixed(0)}%)`;
-}
-
-function updateSessionInsights() {
-    const counts = appState.moodHistory.reduce((acc, mood) => {
-        acc[mood] = (acc[mood] || 0) + 1;
-        return acc;
-    }, {});
-    const dominant = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || 'neutral';
-
-    sessionDominant.textContent = `Dominant mood: ${dominant.charAt(0).toUpperCase() + dominant.slice(1)}`;
-    sessionSwitches.textContent = `Mood switches: ${appState.moodSwitches}`;
-    sessionAccuracy.textContent = `Feedback: ${appState.feedback.match} matches, ${appState.feedback.mismatch} mismatches`;
-}
-
-async function sendFeedback(verdict) {
-    try {
-        const response = await fetch('/mood_feedback', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                verdict,
-                mood: appState.currentMood,
-                recommendation_mode: appState.recommendationMode
-            })
-        });
-        if (!response.ok) {
-            feedbackStatus.textContent = 'Feedback could not be saved.';
-            return;
+            const top = probabilities.slice(0, 3);
+            const mood = entries[0][0];
+            return { mood, confidence, top, scores, probabilities };
         }
 
-        appState.feedback[verdict] += 1;
-        updateSessionInsights();
-        feedbackStatus.textContent = 'Feedback saved. Recommendations will adapt over time.';
-    } catch (error) {
-        feedbackStatus.textContent = 'Network issue while saving feedback.';
-    }
-}
+        function drawLandmarks(landmarks, videoWidth, videoHeight, moodTextValue, confidenceValue, metrics, moodKey) {
+            // Draw facial landmarks on overlay canvas
+            if (!landmarks || landmarks.length === 0) {
+                landmarkOverlay.style.display = 'none';
+                return;
+            }
 
-function saveCurrentSet() {
-    if (!appState.lastRecommendations.length) {
-        feedbackStatus.textContent = 'No recommendations available to save yet.';
-        return;
-    }
+            const rect = video.getBoundingClientRect();
+            // Setup overlay canvas
+            landmarkOverlay.width = videoWidth;
+            landmarkOverlay.height = videoHeight;
+            landmarkOverlay.style.width = rect.width + 'px';
+            landmarkOverlay.style.height = rect.height + 'px';
+            landmarkOverlay.style.display = 'block';
+            const ctx = landmarkOverlay.getContext('2d');
+            ctx.clearRect(0, 0, videoWidth, videoHeight);
 
-    const existing = JSON.parse(localStorage.getItem('savedMoodSets') || '[]');
-    existing.unshift({
-        mood: appState.currentMood,
-        mode: appState.recommendationMode,
-        savedAt: new Date().toISOString(),
-        songs: appState.lastRecommendations
-    });
-    localStorage.setItem('savedMoodSets', JSON.stringify(existing.slice(0, 20)));
-    feedbackStatus.textContent = 'Saved to your local mood sets.';
-}
+            const xs = landmarks.map(point => point.x);
+            const ys = landmarks.map(point => point.y);
+            const minX = Math.max(0, Math.min(...xs));
+            const maxX = Math.min(videoWidth, Math.max(...xs));
+            const minY = Math.max(0, Math.min(...ys));
+            const maxY = Math.min(videoHeight, Math.max(...ys));
+            const padding = Math.max(8, Math.round(Math.min(videoWidth, videoHeight) * 0.02));
+            const boxX = Math.max(0, minX - padding);
+            const boxY = Math.max(0, minY - padding);
+            const boxW = Math.min(videoWidth - boxX, (maxX - minX) + padding * 2);
+            const boxH = Math.min(videoHeight - boxY, (maxY - minY) + padding * 2);
 
-async function shareMoodCard() {
-    const songs = appState.lastRecommendations.slice(0, 3).map((song) => `${song.name} - ${song.artist}`).join(', ');
-    const text = `Current mood: ${appState.currentMood}. Mode: ${appState.recommendationMode}. Picks: ${songs || 'No songs yet'}`;
-    try {
-        if (navigator.share) {
-            await navigator.share({ title: 'My Mood Card', text });
-            feedbackStatus.textContent = 'Mood card shared.';
-            return;
+            ctx.strokeStyle = 'rgba(20, 184, 166, 0.95)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+            const label = (moodTextValue || 'Neutral') + ' · ' + Number(confidenceValue || 0).toFixed(0) + '%';
+            ctx.font = '600 16px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
+            const labelWidth = ctx.measureText(label).width + 18;
+            const labelHeight = 28;
+            const labelX = boxX;
+            const labelY = Math.max(8, boxY - labelHeight - 8);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+            ctx.fillRect(labelX, labelY, labelWidth, labelHeight);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+            ctx.fillText(label, labelX + 9, labelY + 19);
+
+            // Draw landmark points with active-region highlighting.
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+            for (let i = 0; i < landmarks.length; i++) {
+                const lm = landmarks[i];
+                ctx.beginPath(); ctx.arc(lm.x, lm.y, 2, 0, 2*Math.PI); ctx.fill();
+            }
+
+            const activeColor = moodKey === 'happy' ? 'rgba(34, 197, 94, 0.45)' :
+                moodKey === 'sad' ? 'rgba(59, 130, 246, 0.45)' :
+                moodKey === 'angry' ? 'rgba(239, 68, 68, 0.45)' :
+                moodKey === 'surprised' ? 'rgba(245, 158, 11, 0.45)' :
+                moodKey === 'focused' ? 'rgba(14, 165, 233, 0.45)' :
+                'rgba(168, 85, 247, 0.35)';
+
+            // Highlight lips and brows if the current mood points there.
+            ctx.fillStyle = activeColor;
+            [13, 14, 61, 291, 78, 308, 70, 300, 159, 145, 386, 374].forEach(index => {
+                if (landmarks[index]) {
+                    const lm = landmarks[index];
+                    ctx.beginPath(); ctx.arc(lm.x, lm.y, 4, 0, 2 * Math.PI); ctx.fill();
+                }
+            });
         }
 
-        await navigator.clipboard.writeText(text);
-        feedbackStatus.textContent = 'Mood card copied to clipboard.';
-    } catch (error) {
-        feedbackStatus.textContent = 'Unable to share right now.';
-    }
-}
+        function updateDebug(metrics, cls, frameTimeMs) {
+            if (!debugEnabled || !debugStats) {
+                return;
+            }
 
-responseProfileSelect.addEventListener('change', (event) => {
-    applyResponseProfile(event.target.value);
-    feedbackStatus.textContent = 'Response speed updated. Restart camera to apply polling interval.';
-});
+            const lines = [
+                'frames: ' + frameIndex,
+                'mood: ' + cls.mood + ' (' + cls.confidence + '%)',
+                'ear: ' + metrics.avgEAR.toFixed(3),
+                'mar: ' + metrics.MAR.toFixed(3),
+                'smile: ' + metrics.smile.toFixed(3),
+                'brow: ' + metrics.browGap.toFixed(3),
+                'jaw: ' + metrics.jawTension.toFixed(3),
+                'latency: ' + frameTimeMs.toFixed(1) + 'ms'
+            ];
+            debugStats.textContent = lines.join(' · ');
+        }
 
-recommendationModeSelect.addEventListener('change', (event) => {
-    appState.recommendationMode = event.target.value;
-    appState.lastRecommendationAt = 0;
-    appState.lastRecommendationMood = 'neutral';
-});
+        function setStatus(message, isError) {
+            statusEl.textContent = message;
+            statusEl.className = isError
+                ? 'mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700'
+                : 'mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600';
+        }
 
-feedbackMatchButton.addEventListener('click', () => sendFeedback('match'));
-feedbackMismatchButton.addEventListener('click', () => sendFeedback('mismatch'));
-saveSetButton.addEventListener('click', saveCurrentSet);
-shareCardButton.addEventListener('click', shareMoodCard);
+        function stopCamera() {
+            try {
+                if (mpCamera) { mpCamera.stop(); mpCamera = null; }
+                if (mediaStream) { mediaStream.getTracks().forEach(t=>t.stop()); mediaStream = null; }
+                if (faceMesh) { faceMesh.close(); faceMesh = null; }
+                video.srcObject = null;
+            } catch (e) {}
+            setStatus('Camera stopped.', false);
+        }
 
-applyResponseProfile(responseProfileSelect.value);
-appState.recommendationMode = recommendationModeSelect.value;
+        function renderRecommendations(items) {
+            if (!Array.isArray(items) || items.length === 0) {
+                return;
+            }
 
-startCameraButton.addEventListener('click', async () => {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach((track) => track.stop());
-        cameraFeed.srcObject = null;
-        cameraStream = null;
-        cameraContainer.classList.add('hidden');
-        recommendationsContainer.classList.add('hidden');
-        startCameraButton.textContent = 'Start Camera';
-        setChip(chipCamera, 'Camera: Idle', false);
-        setChip(chipFace, 'Face: Waiting', false);
-        if (appState.streamTimer) clearInterval(appState.streamTimer);
-        appState.streamTimer = null;
-        appState.backendMoodBuffer = [];
-        return;
-    }
+            recommendationsList.innerHTML = '';
+            items.forEach(song => {
+                const card = document.createElement('article');
+                card.className = 'rounded-xl border border-slate-200 bg-white p-4';
+                card.innerHTML =
+                    '<h3 class="font-semibold text-slate-900"></h3>' +
+                    '<p class="text-sm text-slate-600"></p>' +
+                    '<p class="mt-2 text-xs font-semibold uppercase tracking-wider text-teal-700"></p>';
 
-    try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 360 } });
-        cameraFeed.srcObject = cameraStream;
-        cameraContainer.classList.remove('hidden');
-        recommendationsContainer.classList.remove('hidden');
-        startCameraButton.textContent = 'Stop Camera';
-        setChip(chipCamera, 'Camera: Live', true);
-        setChip(chipStream, 'Network: Streaming', true);
+                card.children[0].textContent = song.name || 'Unknown song';
+                card.children[1].textContent = song.artist || 'Unknown artist';
+                const mode = song.mode || modeSelect.value || 'discover';
+                const bucket = song.time_bucket || 'anytime';
+                card.children[2].textContent = mode + ' · ' + bucket;
+                recommendationsList.appendChild(card);
+            });
+        }
 
-        overlay = new MoodTrackerOverlay();
-        overlay.start();
-        appState.lastRecommendationMood = 'neutral';
-        appState.lastRecommendationAt = 0;
-        appState.previousMood = appState.currentMood;
+        // MediaPipe results handler
+        function onResults(results) {
+            frameIndex += 1;
+            const startedAt = performance.now();
+            if (!results || !results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+                setStatus('No face detected', false);
+                if (debugStats) {
+                    debugStats.textContent = 'frames: ' + frameIndex + ' · no face detected';
+                }
+                drawLandmarks([], video.videoWidth, video.videoHeight, 'Neutral', 0);
+                return;
+            }
+            setStatus('Face detected', false);
+            const landmarks = results.multiFaceLandmarks[0];
+            const px = toPixelLandmarks(landmarks);
+            const metrics = computeMetrics(px, lastMoodState && lastMoodState.metrics);
+            const cls = classifyMood(metrics, lastMoodState);
 
-        const frameCanvas = document.createElement('canvas');
-        frameCanvas.width = 480;
-        frameCanvas.height = 270;
-        const context = frameCanvas.getContext('2d');
+            const alpha = 0.34;
+            if (lastMoodState && lastMoodState.confidence != null) {
+                cls.confidence = Math.round(cls.confidence * (1 - alpha) + lastMoodState.confidence * alpha);
+            }
 
-        let isFetching = false;
-        appState.streamTimer = setInterval(() => {
-            if (!cameraStream || !cameraFeed.videoWidth || isFetching) return;
-            isFetching = true;
+            lastMoodState = { mood: cls.mood, confidence: cls.confidence, scores: cls.scores, metrics };
 
-            context.drawImage(cameraFeed, 0, 0, frameCanvas.width, frameCanvas.height);
-            const imageDataURL = frameCanvas.toDataURL('image/jpeg', 0.6);
+            // Update UI
+            moodCard.classList.remove('hidden');
+            const key = (cls.mood || 'neutral').toLowerCase();
+            const cfg = moodConfig[key] || moodConfig['neutral'];
+            moodText.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+            moodEmoji.textContent = cfg.emoji;
+            confidenceText.textContent = cls.confidence.toFixed(1);
+            confidenceBar.style.width = cls.confidence + '%';
+            confidenceBar.style.backgroundColor = cfg.color;
+            moodCard.style.borderColor = cfg.borderColor;
+            moodCard.style.backgroundColor = cfg.bgColor;
+
+            topEmotionsContainer.innerHTML = '';
+            cls.top.forEach(e => {
+                const line = document.createElement('div');
+                line.className = 'flex items-center justify-between text-xs';
+                line.innerHTML = '<span class="text-slate-700 font-medium">' + (e.emotion.charAt(0).toUpperCase()+e.emotion.slice(1)) + '</span>' +
+                    '<div class="flex items-center gap-2"><div class="h-1.5 w-20 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-slate-500 rounded-full" style="width:' + e.score + '%"></div></div><span class="text-slate-600 w-6 text-right">' + e.score + '%</span></div>';
+                topEmotionsContainer.appendChild(line);
+            });
+
+            // Draw overlay
+            drawLandmarks(px, video.videoWidth, video.videoHeight, key.charAt(0).toUpperCase()+key.slice(1), cls.confidence, metrics, key);
+
+            updateDebug(metrics, cls, performance.now() - startedAt);
+
+            // Throttled server logging (every 2s)
             const now = Date.now();
-            const shouldRequestRecommendations =
-                (now - appState.lastRecommendationAt) > 7000 ||
-                appState.currentMood !== appState.lastRecommendationMood;
+            if (now - lastServerSend > 2000) {
+                lastServerSend = now;
+                fetch('{{ url_for("live_mood") }}', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ image: canvas.toDataURL('image/jpeg',0.6), include_recommendations: false, recommendation_mode: modeSelect.value, user_hint_mood: key, debug: { frameIndex, metrics, mood: cls.mood, confidence: cls.confidence } })
+                }).catch(()=>{});
+            }
+        }
 
-            fetch('/live_mood', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    image: imageDataURL,
-                    include_recommendations: shouldRequestRecommendations,
-                    recommendation_mode: appState.recommendationMode,
-                    user_hint_mood: moodCheckinSelect.value
-                })
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    const backendMood = normalizeMood(data.mood_key || data.mood);
-                    const stableMood = overlay.stabilizeBackendMood(backendMood);
-                    if (appState.previousMood !== stableMood) {
-                        appState.moodSwitches += 1;
-                    }
-                    appState.previousMood = stableMood;
-                    appState.currentMood = stableMood;
-                    appState.lastBackendMoodAt = Date.now();
-                    updateExplainability(data);
+        async function startCamera() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setStatus('Camera API is not available in this browser.', true); return; }
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:640}, height:{ideal:480} }, audio:false });
+                video.srcObject = mediaStream; await video.play();
 
-                    if (data.recommendations_included) {
-                        renderRecommendations(data.recommendations || []);
-                        appState.lastRecommendations = data.recommendations || [];
-                        appState.lastRecommendationMood = stableMood;
-                        appState.lastRecommendationAt = Date.now();
-                    }
+                faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+                faceMesh.setOptions({maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5});
+                faceMesh.onResults(onResults);
 
-                    updateSessionInsights();
-                    setChip(chipStream, 'Network: Synced', true);
-                })
-                .catch(() => setChip(chipStream, 'Network: Retry', false))
-                .finally(() => { isFetching = false; });
-        }, appState.pollMs);
-    } catch (error) {
-        setChip(chipCamera, 'Camera: Blocked', false);
-        alert('Could not access the camera. Check permission and try again.');
-    }
-});
+                mpCamera = new Camera(video, { onFrame: async () => { await faceMesh.send({image: video}); }, width:640, height:480 });
+                mpCamera.start();
+
+                setStatus('Camera started. Real-time detection active.', false);
+            } catch (err) { setStatus('Camera permission denied or device unavailable.', true); }
+        }
+
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+        window.addEventListener('beforeunload', stopCamera);
+    })();
 </script>
 {% endblock %}
