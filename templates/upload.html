@@ -430,10 +430,21 @@
             if (MAR > 0.28 && avgEAR > 0.25) { scores.surprised += 10; }
             if (MAR < 0.18 && Math.abs(browGap) < 0.010) { scores.focused += 16; scores.calm += 8; }
 
-            // persist sadness smoothing for next frame
+            // Determine if conditions for an "angry" classification are actually present.
+            // Require noticeable brow contraction combined with facial/jaw tension to classify as angry.
+            const angerStrong = ((browGap < -0.025) || (delta.browGap < -0.006)) && (jawTension > 0.06 || delta.jawTension > 0.01);
+            // If sadness is present, dampen angry score so low-energy sadness is not misclassified as anger
+            if (typeof sadSmoothed !== 'undefined' && sadSmoothed > 12) {
+                const damp = Math.round(sadSmoothed * 0.4);
+                scores.angry = Math.max(0, scores.angry - damp);
+            }
+            // If anger indicators are weak, reduce angry influence to avoid false positives
+            if (!angerStrong) {
+                scores.angry = Math.max(0, scores.angry - 20);
+            }
+
+            // persist sadness smoothing for next frame (will be returned with the classification)
             if (!cls) var cls = {};
-            // attach sadnessSmoothed into prev-like structure
-            // (we'll create cls after sorting entries)
 
             const entries = Object.entries(scores).map(([k,v]) => [k, Math.max(0, v)]);
             entries.sort((a, b) => b[1] - a[1]);
@@ -455,6 +466,8 @@
             const result = { mood, confidence, top, scores, probabilities };
             // include sadnessSmoothed in result to be used by caller for UI/logging
             result.sadnessSmoothed = typeof sadSmoothed !== 'undefined' ? sadSmoothed : null;
+            // expose debug info about anger gating
+            result.debug = { angerStrong: typeof angerStrong !== 'undefined' ? angerStrong : false, browGap: browGap, jawTension: jawTension, delta };
             return result;
         }
 
@@ -656,6 +669,11 @@
             drawLandmarks(px, video.videoWidth, video.videoHeight, key.charAt(0).toUpperCase()+key.slice(1), cls.confidence, metrics, key);
 
             updateDebug(metrics, cls, performance.now() - startedAt);
+
+            // Log sadness and anger gating info for debugging
+            try {
+                console.log('frame', frameIndex, 'sadScore=', cls.sadnessSmoothed, 'angerStrong=', cls.debug && cls.debug.angerStrong, 'browGap=', (cls.debug && cls.debug.browGap).toFixed ? (cls.debug.browGap).toFixed(4) : cls.debug && cls.debug.browGap, 'jaw=', (cls.debug && cls.debug.jawTension).toFixed ? (cls.debug.jawTension).toFixed(4) : cls.debug && cls.debug.jawTension);
+            } catch(e) {}
 
             // Update small mood-based recommendations when mood meaningfully changes
             try {
