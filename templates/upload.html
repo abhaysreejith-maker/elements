@@ -22,6 +22,20 @@
                 </div>
             </div>
 
+            <!-- Mood-based song recommendations (below camera preview) -->
+            <div id="moodRecSmall" class="mt-4 hidden rounded-xl border border-slate-200 bg-white p-4 transition-opacity duration-300" style="opacity:0;">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-slate-600">Recommended for</div>
+                        <div class="text-lg font-semibold text-slate-900" id="moodRecLabel">Neutral</div>
+                    </div>
+                    <div class="text-sm text-slate-500" id="moodRecHint">Updated live</div>
+                </div>
+                <div id="moodRecList" class="mt-3 space-y-2 text-sm text-slate-700">
+                    <!-- Filled by JS: shows 5 rotated songs -->
+                </div>
+            </div>
+
             <!-- Hidden canvas for processing -->
             <canvas id="cameraCanvas" class="hidden"></canvas>
 
@@ -160,9 +174,108 @@
         let frameIndex = 0;
         let lastMoodState = null;
         let debugEnabled = true;
+        let displayedMood = null; // currently shown recommendations mood
         
         const landmarkOverlay = document.getElementById('landmarkOverlay');
         const debugStats = document.getElementById('debugStats');
+
+        // Simple local song dataset per mood (5-10 entries each)
+        const SONG_DB = {
+            happy: [
+                {name: 'Sunlit Days', artist: 'The Brightbeats'},
+                {name: 'Up and Over', artist: 'Neon Trails'},
+                {name: 'Golden Hour', artist: 'Viva City'},
+                {name: 'Keep It Moving', artist: 'Pulse Line'},
+                {name: 'A Little Spark', artist: 'Stereo Joy'}
+            ],
+            sad: [
+                {name: 'Blue Window', artist: 'Lo-Fi Remnant'},
+                {name: 'Rain on Concrete', artist: 'Velvet Nights'},
+                {name: 'Quiet Rooms', artist: 'Slow Motion Poet'},
+                {name: 'Warm Low Light', artist: 'Paper Boats'},
+                {name: 'Soft Echoes', artist: 'Nightshore'}
+            ],
+            angry: [
+                {name: 'Break the Night', artist: 'Red Voltage'},
+                {name: 'Edge of Noise', artist: 'Iron Pulse'},
+                {name: 'Firewalk', artist: 'Rogue Engine'},
+                {name: 'Rattle Chain', artist: 'The Tension'},
+                {name: 'Hardwired', artist: 'Static Riot'}
+            ],
+            surprised: [
+                {name: 'Flip the Sky', artist: 'Aurora Shift'},
+                {name: 'Unexpected', artist: 'Glass Orbit'},
+                {name: 'Quantum Leap', artist: 'Pulse & Phase'},
+                {name: 'Kaleido', artist: 'Sound Curious'},
+                {name: 'Blink Twice', artist: 'Stereo Wonder'}
+            ],
+            neutral: [
+                {name: 'Still Water', artist: 'Ambient Drift'},
+                {name: 'Low Tide', artist: 'Calm Harbor'},
+                {name: 'Gentle Plain', artist: 'Field Notes'},
+                {name: 'Daylight', artist: 'Subtle Motion'},
+                {name: 'Evening Hush', artist: 'Paper Clouds'}
+            ],
+            calm: [
+                {name: 'Focus Stream', artist: 'Instrumental Lab'},
+                {name: 'Deep Work', artist: 'Concentrate'},
+                {name: 'Quiet Focus', artist: 'Minimal Sets'},
+                {name: 'Under Current', artist: 'Soft Circuits'},
+                {name: 'Drift Study', artist: 'Library Tones'}
+            ],
+            focused: [
+                {name: 'Machine Room', artist: 'Protocol'},
+                {name: 'Concentrate', artist: 'Deep Desk'},
+                {name: 'Tunnel Light', artist: 'MonoPhase'},
+                {name: 'Taskstream', artist: 'Focus Wave'},
+                {name: 'Pinpoint', artist: 'Signal & Noise'}
+            ]
+        };
+
+        function sampleSongsForMood(mood, count = 5) {
+            const pool = SONG_DB[mood] || SONG_DB['neutral'];
+            const picked = [];
+            const copy = pool.slice();
+            while (picked.length < Math.min(count, pool.length)) {
+                const i = Math.floor(Math.random() * copy.length);
+                picked.push(copy.splice(i,1)[0]);
+            }
+            return picked;
+        }
+
+        function updateMoodRecommendations(mood, cls) {
+            try {
+                const label = (mood || 'neutral').charAt(0).toUpperCase() + (mood || 'neutral').slice(1);
+                const container = document.getElementById('moodRecSmall');
+                const list = document.getElementById('moodRecList');
+                const labelEl = document.getElementById('moodRecLabel');
+                labelEl.textContent = label;
+
+                const songs = sampleSongsForMood(mood, 5);
+                // Log selection
+                console.log('Mood changed to', mood, 'confidence:', cls.confidence, ' — selecting songs:', songs.map(s=>s.name));
+
+                list.innerHTML = '';
+                songs.forEach(s => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between';
+                    row.innerHTML = '<div class="font-medium">' + (s.name) + '</div><div class="text-slate-500 text-xs">' + (s.artist) + '</div>';
+                    list.appendChild(row);
+                });
+
+                // Smooth transition: show panel if hidden
+                if (container.classList.contains('hidden')) {
+                    container.classList.remove('hidden');
+                    // small timeout so CSS transition works
+                    requestAnimationFrame(() => { container.style.opacity = '1'; });
+                } else {
+                    // brief fade to highlight change
+                    container.style.opacity = '0.35';
+                    setTimeout(()=> container.style.opacity = '1', 180);
+                }
+                displayedMood = mood;
+            } catch (e) { console.error('updateMoodRecommendations err', e); }
+        }
 
         function toPixelLandmarks(landmarks) {
             if (!landmarks) return [];
@@ -225,13 +338,13 @@
                 jawTension: jawTension - (previous.jawTension || jawTension)
             };
 
-            return {avgEAR, MAR, smile, browGap, jawTension, faceScale, delta};
+            return {avgEAR, MAR, smile, mouthCornerLift, browGap, jawTension, faceScale, delta};
         }
 
         function classifyMood(metrics, previousState) {
             // Base scores - equal starting point so neutral isn't privileged
             const scores = {happy:14, sad:14, angry:14, surprised:14, neutral:14, calm:14, focused:14};
-            const {avgEAR, MAR, smile, browGap, jawTension, delta} = metrics;
+            const {avgEAR, MAR, smile, mouthCornerLift, browGap, jawTension, delta} = metrics;
             const prev = previousState || { mood: 'neutral', confidence: 0, scores: scores };
 
             // Lightweight temporal smoothing: remember prior state but keep it responsive.
@@ -245,8 +358,12 @@
             // Eye openness: smaller changes should matter.
             if (avgEAR > 0.30 || delta.ear > 0.03) { scores.surprised += 38; scores.happy += 18; }
             else if (avgEAR > 0.24 || delta.ear > 0.015) { scores.happy += 22; scores.surprised += 10; }
+            // Droopy eyelids / reduced eye openness -> sad/calm
             else if (avgEAR < 0.10 || delta.ear < -0.02) { scores.sad += 28; scores.calm += 14; }
             else if (avgEAR < 0.14) { scores.sad += 18; scores.calm += 10; }
+
+            // Additional droopy-eye sensitivity for sad detection
+            if (avgEAR < 0.16) { scores.sad += 8; }
 
             // Mouth openness and lip curvature
             if (MAR > 0.34 || delta.mar > 0.02) { scores.surprised += 30; scores.happy += 16; }
@@ -254,7 +371,9 @@
             if (MAR < 0.16) { scores.calm += 12; scores.focused += 10; }
             if (smile > 0.012 || delta.smile > 0.004) { scores.happy += 32; scores.energetic += 15; }
             if (smile > 0.020) { scores.happy += 18; }
+            // Downward lip curvature (subtle sadness)
             if (smile < -0.008 || delta.smile < -0.004) { scores.sad += 16; }
+            if (smile < -0.012 || mouthCornerLift < -0.012) { scores.sad += 30; }
 
             // Eyebrows / anger / focus
             if (browGap < -0.018 || delta.browGap < -0.004) { scores.angry += 28; scores.focused += 10; }
@@ -268,6 +387,13 @@
             // Combined conditions for small but meaningful expressions.
             if (avgEAR > 0.22 && smile > 0.010) { scores.happy += 18; }
             if (avgEAR < 0.13 && browGap < 0.00) { scores.sad += 12; }
+            // Minimal facial movement - subtle/quiet sadness
+            const lowMovement = Math.abs(delta.ear) < 0.008 && Math.abs(delta.mar) < 0.008 && Math.abs(delta.smile) < 0.006;
+            if (lowMovement && avgEAR < 0.17) { scores.sad += 18; }
+
+            // If strong sad indicators present, reduce neutral score slightly to avoid misclassifying as neutral
+            const sadIndicators = (smile < -0.008 ? 1 : 0) + (avgEAR < 0.16 ? 1 : 0) + (lowMovement ? 1 : 0) + (mouthCornerLift < -0.01 ? 1 : 0);
+            if (sadIndicators >= 2) { scores.neutral = Math.max(0, scores.neutral - 10); }
             if (MAR > 0.28 && avgEAR > 0.25) { scores.surprised += 10; }
             if (MAR < 0.18 && Math.abs(browGap) < 0.010) { scores.focused += 16; scores.calm += 8; }
 
@@ -467,6 +593,17 @@
             drawLandmarks(px, video.videoWidth, video.videoHeight, key.charAt(0).toUpperCase()+key.slice(1), cls.confidence, metrics, key);
 
             updateDebug(metrics, cls, performance.now() - startedAt);
+
+            // Update small mood-based recommendations when mood meaningfully changes
+            try {
+                const nowMood = key;
+                const prevShown = displayedMood;
+                // Only switch recommendations when confidence is reasonably high to avoid churn
+                if (nowMood !== prevShown && cls.confidence >= 28) {
+                    console.log('Detected mood change:', nowMood, 'confidence:', cls.confidence);
+                    updateMoodRecommendations(nowMood, cls);
+                }
+            } catch (e) { console.error(e); }
 
             // Throttled server logging (every 2s)
             const now = Date.now();
