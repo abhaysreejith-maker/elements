@@ -697,9 +697,28 @@
             const now = Date.now();
             if (now - lastServerSend > 2000) {
                 lastServerSend = now;
+                // Keep the hidden canvas in sync with the current camera frame so the backend
+                // receives the actual live image instead of an empty canvas.
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const cameraCtx = canvas.getContext('2d');
+                if (cameraCtx && video.videoWidth && video.videoHeight) {
+                    cameraCtx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                }
+
                 fetch('{{ url_for("live_mood") }}', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ image: canvas.toDataURL('image/jpeg',0.6), include_recommendations: true, recommendation_mode: modeSelect.value, user_hint_mood: key, debug: { frameIndex, metrics, mood: cls.mood, confidence: cls.confidence } })
+                    body: JSON.stringify({
+                        image: canvas.toDataURL('image/jpeg',0.6),
+                        include_recommendations: true,
+                        recommendation_mode: modeSelect.value,
+                        user_hint_mood: key,
+                        mood_weights: cls.probabilities,
+                        top_emotions: cls.top,
+                        client_mood: cls.mood,
+                        client_confidence: cls.confidence,
+                        debug: { frameIndex, metrics, mood: cls.mood, confidence: cls.confidence }
+                    })
                 })
                 .then(resp => resp.json())
                 .then(data => {

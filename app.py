@@ -754,11 +754,13 @@ def live_mood():
     include_recommendations = bool(data.get('include_recommendations', True))
     recommendation_mode = str(data.get('recommendation_mode', 'discover')).lower()
     user_hint_mood = str(data.get('user_hint_mood', 'neutral')).lower()
+    payload_mood_weights = data.get('mood_weights') or data.get('top_emotions') or []
+    payload_top_emotions = data.get('top_emotions') or []
 
     camera_result = predict_camera_emotion(image_bytes)
     fusion = fuse_moods(camera_result.get('mood', 'neutral'), camera_result.get('confidence', 0.0), user_hint_mood)
     predicted_mood = fusion.get('mood', 'neutral')
-    top_emotions = camera_result.get('top_emotions', [])
+    top_emotions = payload_top_emotions if payload_top_emotions else camera_result.get('top_emotions', [])
 
     store_mood_event(
         session.get('user_email'),
@@ -772,10 +774,11 @@ def live_mood():
         predicted_mood=predicted_mood,
         mode=recommendation_mode,
         user_email=session.get('user_email'),
+        mood_weights=payload_mood_weights,
         top_emotions=top_emotions
     ) if include_recommendations else []
 
-    blended_profile = build_mood_profile(predicted_mood=predicted_mood, top_emotions=top_emotions)
+    blended_profile = build_mood_profile(predicted_mood=predicted_mood, mood_weights=payload_mood_weights, top_emotions=top_emotions)
     blended_mood = ' / '.join(m.capitalize() for m in list(sorted(blended_profile, key=blended_profile.get, reverse=True))[:3]) if blended_profile else predicted_mood.capitalize()
 
     return jsonify({
