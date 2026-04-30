@@ -598,6 +598,7 @@
 
         function renderRecommendations(items) {
             if (!Array.isArray(items) || items.length === 0) {
+                recommendationsList.innerHTML = '<div class="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Start camera or upload a file to see suggestions.</div>';
                 return;
             }
 
@@ -698,8 +699,18 @@
                 lastServerSend = now;
                 fetch('{{ url_for("live_mood") }}', {
                     method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ image: canvas.toDataURL('image/jpeg',0.6), include_recommendations: false, recommendation_mode: modeSelect.value, user_hint_mood: key, debug: { frameIndex, metrics, mood: cls.mood, confidence: cls.confidence } })
-                }).catch(()=>{});
+                    body: JSON.stringify({ image: canvas.toDataURL('image/jpeg',0.6), include_recommendations: true, recommendation_mode: modeSelect.value, user_hint_mood: key, debug: { frameIndex, metrics, mood: cls.mood, confidence: cls.confidence } })
+                })
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data && Array.isArray(data.recommendations)) {
+                        renderRecommendations(data.recommendations);
+                        if (data.blended_mood) {
+                            console.log('Average mood blend:', data.blended_mood);
+                        }
+                    }
+                })
+                .catch(()=>{});
             }
         }
 

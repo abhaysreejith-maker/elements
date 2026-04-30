@@ -282,7 +282,42 @@ def recommendation_profile(mode, time_bucket):
     return profile
 
 
-def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', user_email=None):
+def build_mood_profile(predicted_mood=None, mood_weights=None, top_emotions=None):
+    profile = {}
+
+    def add_weight(label, value):
+        mood = normalize_mood_label(label)
+        if not mood:
+            return
+        profile[mood] = profile.get(mood, 0.0) + float(value or 0.0)
+
+    if isinstance(mood_weights, dict):
+        for label, value in mood_weights.items():
+            add_weight(label, value)
+    elif isinstance(mood_weights, list):
+        for item in mood_weights:
+            if isinstance(item, dict):
+                add_weight(item.get('emotion') or item.get('mood'), item.get('score', 0.0))
+            elif isinstance(item, (tuple, list)) and len(item) >= 2:
+                add_weight(item[0], item[1])
+
+    if isinstance(top_emotions, list):
+        for item in top_emotions:
+            if isinstance(item, dict):
+                add_weight(item.get('emotion') or item.get('mood'), item.get('score', 0.0))
+
+    if predicted_mood:
+        add_weight(predicted_mood, 1.0)
+
+    total = sum(profile.values())
+    if total > 0:
+        for label in list(profile.keys()):
+            profile[label] = profile[label] / total
+
+    return profile
+
+
+def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', user_email=None, mood_weights=None, top_emotions=None):
     mood_recommendations = {
         'happy': ['happy', 'energetic'],
         'energetic': ['energetic', 'happy'],
@@ -297,10 +332,15 @@ def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', use
 
     normalized_mood = normalize_mood_label(predicted_mood)
     normalized_mode = str(mode or 'discover').lower()
-    recommended_moods = mood_recommendations.get(normalized_mood, ['happy', 'calm'])
+    mood_profile = build_mood_profile(predicted_mood=normalized_mood, mood_weights=mood_weights, top_emotions=top_emotions)
+    if mood_profile:
+        recommended_moods = [mood for mood, _ in sorted(mood_profile.items(), key=lambda item: item[1], reverse=True)]
+    else:
+        recommended_moods = mood_recommendations.get(normalized_mood, ['happy', 'calm'])
     time_bucket = get_time_bucket()
 
-    cache_key = (normalized_mood, normalized_mode, time_bucket, num_recommendations)
+    profile_signature = tuple(sorted((mood, round(weight, 4)) for mood, weight in mood_profile.items())) if mood_profile else ()
+    cache_key = (normalized_mood, normalized_mode, time_bucket, num_recommendations, profile_signature)
     if cache_key in RECOMMENDATION_CACHE:
         return RECOMMENDATION_CACHE[cache_key]
 
@@ -316,12 +356,20 @@ def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', use
             if column in filtered_songs.columns:
                 filtered_songs['mode_score'] += filtered_songs[column] * float(weight)
 
+        # Blend all detected moods into the ranking so recommendations follow the average mood profile.
+        filtered_songs['mood_score'] = 0.0
+        if mood_profile:
+            mood_lookup = filtered_songs['mood'].str.lower().map(lambda mood: float(mood_profile.get(mood, 0.0)))
+            filtered_songs['mood_score'] = mood_lookup.fillna(0.0) * 100.0
+
+        filtered_songs['final_score'] = filtered_songs['mode_score'] + filtered_songs['mood_score']
+
         if normalized_mode == 'discover':
-            filtered_songs = filtered_songs.sort_values(by=['mode_score', 'name'], ascending=[False, True], kind='mergesort')
+            filtered_songs = filtered_songs.sort_values(by=['final_score', 'name'], ascending=[False, True], kind='mergesort')
         elif normalized_mode == 'familiar':
-            filtered_songs = filtered_songs.sort_values(by=['mode_score', 'artist'], ascending=[False, True], kind='mergesort')
+            filtered_songs = filtered_songs.sort_values(by=['final_score', 'artist'], ascending=[False, True], kind='mergesort')
         else:
-            filtered_songs = filtered_songs.sort_values(by=['mode_score', 'name', 'artist'], ascending=[False, True, True], kind='mergesort')
+            filtered_songs = filtered_songs.sort_values(by=['final_score', 'name', 'artist'], ascending=[False, True, True], kind='mergesort')
 
         songs = filtered_songs.drop_duplicates(subset=['name', 'artist']).head(num_recommendations)
         for _, song in songs.iterrows():
@@ -331,6 +379,14 @@ def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', use
                 'mode': normalized_mode,
                 'time_bucket': time_bucket
             })
+
+    blended_mood = None
+    if mood_profile:
+        blended_moods = [mood for mood, weight in sorted(mood_profile.items(), key=lambda item: item[1], reverse=True) if weight > 0]
+        blended_mood = ' / '.join(m.capitalize() for m in blended_moods[:3]) if blended_moods else None
+
+    if blended_mood:
+        print(f"Recommendation blend for {normalized_mood}: {blended_mood}")
 
     RECOMMENDATION_CACHE[cache_key] = recommended_songs
     return recommended_songs
@@ -702,6 +758,7 @@ def live_mood():
     camera_result = predict_camera_emotion(image_bytes)
     fusion = fuse_moods(camera_result.get('mood', 'neutral'), camera_result.get('confidence', 0.0), user_hint_mood)
     predicted_mood = fusion.get('mood', 'neutral')
+    top_emotions = camera_result.get('top_emotions', [])
 
     store_mood_event(
         session.get('user_email'),
@@ -714,12 +771,17 @@ def live_mood():
     recommendations_data = recommend_songs(
         predicted_mood=predicted_mood,
         mode=recommendation_mode,
-        user_email=session.get('user_email')
+        user_email=session.get('user_email'),
+        top_emotions=top_emotions
     ) if include_recommendations else []
+
+    blended_profile = build_mood_profile(predicted_mood=predicted_mood, top_emotions=top_emotions)
+    blended_mood = ' / '.join(m.capitalize() for m in list(sorted(blended_profile, key=blended_profile.get, reverse=True))[:3]) if blended_profile else predicted_mood.capitalize()
 
     return jsonify({
         'mood': predicted_mood.capitalize(),
         'mood_key': predicted_mood.lower(),
+        'blended_mood': blended_mood,
         'confidence': camera_result.get('confidence', 0.0),
         'top_emotions': camera_result.get('top_emotions', []),
         'latency_ms': camera_result.get('latency_ms', 0),
