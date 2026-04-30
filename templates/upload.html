@@ -102,6 +102,19 @@
                 <button type="submit" class="mt-4 w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400">Analyze Audio</button>
             </form>
 
+            <div id="audioProgressWrap" class="mt-4 hidden rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <div id="audioProgressTitle" class="text-sm font-semibold text-teal-900">Preparing audio analysis</div>
+                        <div id="audioProgressStatus" class="text-xs text-teal-700">Reading file and estimating recommendations...</div>
+                    </div>
+                    <div id="audioProgressPercent" class="text-sm font-bold text-teal-900">0%</div>
+                </div>
+                <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-teal-100">
+                    <div id="audioProgressBar" class="h-full w-0 rounded-full bg-teal-600 transition-all duration-200" style="width:0%"></div>
+                </div>
+            </div>
+
             {% if message %}
             <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">{{ message }}</div>
             {% endif %}
@@ -148,6 +161,11 @@
         const stopBtn = document.getElementById('stopCameraBtn');
         const modeSelect = document.getElementById('recommendationMode');
         const statusEl = document.getElementById('cameraStatus');
+        const audioProgressWrap = document.getElementById('audioProgressWrap');
+        const audioProgressBar = document.getElementById('audioProgressBar');
+        const audioProgressPercent = document.getElementById('audioProgressPercent');
+        const audioProgressTitle = document.getElementById('audioProgressTitle');
+        const audioProgressStatus = document.getElementById('audioProgressStatus');
         const moodCard = document.getElementById('liveMoodCard');
         const moodText = document.getElementById('liveMoodText');
         const moodEmoji = document.getElementById('liveMoodEmoji');
@@ -175,6 +193,7 @@
         let lastMoodState = null;
         let debugEnabled = true;
         let displayedMood = null; // currently shown recommendations mood
+        let progressTimer = null;
         
         const landmarkOverlay = document.getElementById('landmarkOverlay');
         const debugStats = document.getElementById('debugStats');
@@ -275,6 +294,90 @@
                 }
                 displayedMood = mood;
             } catch (e) { console.error('updateMoodRecommendations err', e); }
+        }
+
+        function setAudioProgress(percent, title, status, indeterminate) {
+            if (!audioProgressWrap) return;
+            audioProgressWrap.classList.remove('hidden');
+            if (audioProgressBar) {
+                if (indeterminate) {
+                    audioProgressBar.style.width = '100%';
+                    audioProgressBar.classList.add('animate-pulse');
+                } else {
+                    audioProgressBar.classList.remove('animate-pulse');
+                    audioProgressBar.style.width = Math.max(0, Math.min(100, percent)) + '%';
+                }
+            }
+            if (audioProgressPercent) audioProgressPercent.textContent = Math.round(Math.max(0, Math.min(100, percent))) + '%';
+            if (audioProgressTitle && title) audioProgressTitle.textContent = title;
+            if (audioProgressStatus && status) audioProgressStatus.textContent = status;
+        }
+
+        function hideAudioProgress() {
+            if (progressTimer) {
+                clearInterval(progressTimer);
+                progressTimer = null;
+            }
+            if (audioProgressWrap) audioProgressWrap.classList.add('hidden');
+            if (audioProgressBar) {
+                audioProgressBar.classList.remove('animate-pulse');
+                audioProgressBar.style.width = '0%';
+            }
+            if (audioProgressPercent) audioProgressPercent.textContent = '0%';
+        }
+
+        function submitAudioWithProgress(form) {
+            const fileInput = form.querySelector('#audioInput');
+            const file = fileInput && fileInput.files && fileInput.files[0];
+            if (!file) {
+                form.submit();
+                return;
+            }
+
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+            let uploadProgress = 0;
+            let analysisProgress = 0;
+
+            setAudioProgress(2, 'Uploading audio', 'Sending file to the server...', false);
+
+            xhr.upload.onprogress = (event) => {
+                if (!event.lengthComputable) {
+                    setAudioProgress(10, 'Uploading audio', 'Sending file to the server...', true);
+                    return;
+                }
+                uploadProgress = Math.max(1, (event.loaded / event.total) * 75);
+                setAudioProgress(uploadProgress, 'Uploading audio', 'Preparing the song recommendation analysis...', false);
+            };
+
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        hideAudioProgress();
+                        document.open();
+                        document.write(xhr.responseText);
+                        document.close();
+                    } else {
+                        if (progressTimer) {
+                            clearInterval(progressTimer);
+                            progressTimer = null;
+                        }
+                        setAudioProgress(100, 'Analysis failed', 'Please try again.', false);
+                    }
+                }
+            };
+
+            xhr.open(form.method || 'POST', form.action || window.location.href, true);
+            xhr.responseType = 'text';
+            xhr.send(formData);
+
+            if (progressTimer) clearInterval(progressTimer);
+            progressTimer = setInterval(() => {
+                if (uploadProgress < 75) return;
+                analysisProgress = Math.min(98, analysisProgress + 2);
+                const shown = Math.max(uploadProgress, analysisProgress);
+                setAudioProgress(shown, 'Analyzing audio', 'Detecting mood and ranking songs...', true);
+            }, 220);
         }
 
         function toPixelLandmarks(landmarks) {
@@ -752,6 +855,13 @@
 
         startBtn.addEventListener('click', startCamera);
         stopBtn.addEventListener('click', stopCamera);
+        const audioForm = document.querySelector('form[enctype="multipart/form-data"]');
+        if (audioForm) {
+            audioForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                submitAudioWithProgress(audioForm);
+            });
+        }
         window.addEventListener('beforeunload', stopCamera);
     })();
 </script>
