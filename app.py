@@ -345,40 +345,49 @@ def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', use
         return RECOMMENDATION_CACHE[cache_key]
 
     recommended_songs = []
-    if similarity_matrix.size == 0 or data.empty:
+    if data.empty:
         return []
 
     filtered_songs = data[data['mood'].str.lower().isin(recommended_moods)].copy()
-    if not filtered_songs.empty:
-        profile = recommendation_profile(normalized_mode, time_bucket)
-        filtered_songs['mode_score'] = 0.0
-        for column, weight in profile.items():
-            if column in filtered_songs.columns:
-                filtered_songs['mode_score'] += filtered_songs[column] * float(weight)
 
-        # Blend all detected moods into the ranking so recommendations follow the average mood profile.
-        filtered_songs['mood_score'] = 0.0
-        if mood_profile:
-            mood_lookup = filtered_songs['mood'].str.lower().map(lambda mood: float(mood_profile.get(mood, 0.0)))
-            filtered_songs['mood_score'] = mood_lookup.fillna(0.0) * 100.0
+    # Fallback: if the mood subset is empty, relax to the dominant blended moods.
+    if filtered_songs.empty and mood_profile:
+        relaxed_moods = list(mood_profile.keys())[:4]
+        filtered_songs = data[data['mood'].str.lower().isin(relaxed_moods)].copy()
 
-        filtered_songs['final_score'] = filtered_songs['mode_score'] + filtered_songs['mood_score']
+    # Last resort: any song in the dataset so the UI never stays empty.
+    if filtered_songs.empty:
+        filtered_songs = data.copy()
 
-        if normalized_mode == 'discover':
-            filtered_songs = filtered_songs.sort_values(by=['final_score', 'name'], ascending=[False, True], kind='mergesort')
-        elif normalized_mode == 'familiar':
-            filtered_songs = filtered_songs.sort_values(by=['final_score', 'artist'], ascending=[False, True], kind='mergesort')
-        else:
-            filtered_songs = filtered_songs.sort_values(by=['final_score', 'name', 'artist'], ascending=[False, True, True], kind='mergesort')
+    profile = recommendation_profile(normalized_mode, time_bucket)
+    filtered_songs['mode_score'] = 0.0
+    for column, weight in profile.items():
+        if column in filtered_songs.columns:
+            filtered_songs['mode_score'] += filtered_songs[column] * float(weight)
 
-        songs = filtered_songs.drop_duplicates(subset=['name', 'artist']).head(num_recommendations)
-        for _, song in songs.iterrows():
-            recommended_songs.append({
-                'name': song['name'],
-                'artist': song['artist'],
-                'mode': normalized_mode,
-                'time_bucket': time_bucket
-            })
+    # Blend all detected moods into the ranking so recommendations follow the average mood profile.
+    filtered_songs['mood_score'] = 0.0
+    if mood_profile:
+        mood_lookup = filtered_songs['mood'].str.lower().map(lambda mood: float(mood_profile.get(mood, 0.0)))
+        filtered_songs['mood_score'] = mood_lookup.fillna(0.0) * 100.0
+
+    filtered_songs['final_score'] = filtered_songs['mode_score'] + filtered_songs['mood_score']
+
+    if normalized_mode == 'discover':
+        filtered_songs = filtered_songs.sort_values(by=['final_score', 'popularity', 'name'], ascending=[False, False, True], kind='mergesort')
+    elif normalized_mode == 'familiar':
+        filtered_songs = filtered_songs.sort_values(by=['final_score', 'artist', 'name'], ascending=[False, True, True], kind='mergesort')
+    else:
+        filtered_songs = filtered_songs.sort_values(by=['final_score', 'name', 'artist'], ascending=[False, True, True], kind='mergesort')
+
+    songs = filtered_songs.drop_duplicates(subset=['name', 'artist']).head(num_recommendations)
+    for _, song in songs.iterrows():
+        recommended_songs.append({
+            'name': song['name'],
+            'artist': song['artist'],
+            'mode': normalized_mode,
+            'time_bucket': time_bucket
+        })
 
     blended_mood = None
     if mood_profile:
@@ -387,6 +396,19 @@ def recommend_songs(predicted_mood, num_recommendations=10, mode='discover', use
 
     if blended_mood:
         print(f"Recommendation blend for {normalized_mood}: {blended_mood}")
+
+    if not recommended_songs:
+        print(f"Recommendation fallback used for {normalized_mood} at {time_bucket}")
+        fallback_songs = data.drop_duplicates(subset=['name', 'artist']).head(num_recommendations)
+        recommended_songs = [
+            {
+                'name': song['name'],
+                'artist': song['artist'],
+                'mode': normalized_mode,
+                'time_bucket': time_bucket
+            }
+            for _, song in fallback_songs.iterrows()
+        ]
 
     RECOMMENDATION_CACHE[cache_key] = recommended_songs
     return recommended_songs
