@@ -100,20 +100,31 @@
                     <input id="audioInput" name="audio" type="file" class="sr-only" accept="audio/*" required>
                 </label>
                 <button type="submit" class="mt-4 w-full rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-400">Analyze Audio</button>
-            </form>
 
-            <div id="audioProgressWrap" class="mt-4 hidden rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div id="audioProgressTitle" class="text-sm font-semibold text-teal-900">Preparing audio analysis</div>
-                        <div id="audioProgressStatus" class="text-xs text-teal-700">Reading file and estimating recommendations...</div>
+                <!-- Progress UI moved here so it appears directly below the Analyze button -->
+                <div id="audioProgressWrap" class="mt-4 hidden rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <div id="audioProgressTitle" class="text-sm font-semibold text-teal-900">Preparing audio analysis</div>
+                            <div id="audioProgressStatus" class="text-xs text-teal-700">Reading file and estimating recommendations...</div>
+                        </div>
+                        <div id="audioProgressPercent" class="text-sm font-bold text-teal-900">0%</div>
                     </div>
-                    <div id="audioProgressPercent" class="text-sm font-bold text-teal-900">0%</div>
+
+                    <!-- Staged progress steps -->
+                    <div id="audioSteps" class="mt-3 flex items-center gap-2 text-xs text-slate-600">
+                        <div data-step="0" class="audio-step flex-1 text-center">Analyzing audio...</div>
+                        <div data-step="1" class="audio-step flex-1 text-center">Detecting mood...</div>
+                        <div data-step="2" class="audio-step flex-1 text-center">Finding matching songs...</div>
+                        <div data-step="3" class="audio-step flex-1 text-center">Finalizing recommendations...</div>
+                    </div>
+
+                    <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-teal-100 relative">
+                        <div id="audioProgressBar" class="h-full w-0 rounded-full bg-gradient-to-r from-teal-500 via-teal-600 to-emerald-500 transition-all duration-300" style="width:0%"></div>
+                        <div id="audioProgressShimmer" class="absolute inset-0 opacity-0 pointer-events-none" style="background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0) 100%); transform: translateX(-100%); transition: transform 1.6s linear;"></div>
+                    </div>
                 </div>
-                <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-teal-100">
-                    <div id="audioProgressBar" class="h-full w-0 rounded-full bg-teal-600 transition-all duration-200" style="width:0%"></div>
-                </div>
-            </div>
+            </form>
 
             {% if message %}
             <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">{{ message }}</div>
@@ -296,34 +307,124 @@
             } catch (e) { console.error('updateMoodRecommendations err', e); }
         }
 
-        function setAudioProgress(percent, title, status, indeterminate) {
-            if (!audioProgressWrap) return;
-            audioProgressWrap.classList.remove('hidden');
-            if (audioProgressBar) {
-                if (indeterminate) {
-                    audioProgressBar.style.width = '100%';
-                    audioProgressBar.classList.add('animate-pulse');
+        // Processing UI controller
+        let processingState = { active: false, percent: 0, stepIndex: 0 };
+        let rafId = null;
+        let simStartTs = 0;
+        let simTargetPercent = 95; // don't reach 100 until server responds
+
+        function setStepHighlight(index) {
+            const steps = document.querySelectorAll('#audioSteps .audio-step');
+            steps.forEach((el, i) => {
+                if (i === index) {
+                    el.classList.add('font-semibold', 'text-teal-900');
                 } else {
-                    audioProgressBar.classList.remove('animate-pulse');
-                    audioProgressBar.style.width = Math.max(0, Math.min(100, percent)) + '%';
+                    el.classList.remove('font-semibold', 'text-teal-900');
+                }
+            });
+        }
+
+        // Smooth easing toward target
+        function easeProgress(current, target, speed=0.12) {
+            return current + (target - current) * speed;
+        }
+
+        function renderProgress() {
+            if (!processingState.active) return;
+            // update shimmer animation
+            const shimmer = document.getElementById('audioProgressShimmer');
+            if (shimmer) {
+                shimmer.style.opacity = processingState.percent < 98 ? '1' : '0';
+                const offset = (performance.now() / 12) % 200; // moves shimmer slowly
+                shimmer.style.transform = 'translateX(' + offset + '%)';
+            }
+
+            // update percent with easing
+            processingState.percent = easeProgress(processingState.percent, processingState.target || simTargetPercent, 0.14);
+            processingState.percent = Math.min(99.5, processingState.percent);
+            if (audioProgressBar) audioProgressBar.style.width = processingState.percent.toFixed(1) + '%';
+            if (audioProgressPercent) audioProgressPercent.textContent = Math.round(processingState.percent) + '%';
+
+            // determine step based on percent ranges
+            const step = processingState.percent < 25 ? 0 : (processingState.percent < 55 ? 1 : (processingState.percent < 80 ? 2 : 3));
+            if (step !== processingState.stepIndex) {
+                processingState.stepIndex = step;
+                const titles = ['Analyzing audio...', 'Detecting mood...', 'Finding matching songs...', 'Finalizing recommendations...'];
+                if (audioProgressTitle) audioProgressTitle.textContent = titles[step];
+                if (audioProgressStatus) audioProgressStatus.textContent = titles[step];
+                setStepHighlight(step);
+            }
+
+            rafId = requestAnimationFrame(renderProgress);
+        }
+
+        function startProcessingUI() {
+            if (!audioProgressWrap) return;
+            processingState.active = true;
+            processingState.percent = 2;
+            processingState.target = simTargetPercent;
+            processingState.stepIndex = 0;
+            simStartTs = performance.now();
+            audioProgressWrap.classList.remove('hidden');
+            // kickoff render loop
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(renderProgress);
+            setStepHighlight(0);
+        }
+
+        function finishProcessingUI(success=true) {
+            if (!processingState.active) return;
+            // animate to 100% smoothly then hide
+            if (rafId) cancelAnimationFrame(rafId);
+            const start = performance.now();
+            const from = processingState.percent || 0;
+            const to = success ? 100 : Math.min(100, from + 4);
+            const duration = success ? 450 : 300;
+            const stepTitles = success ? ['Finalizing recommendations...','Done'] : ['Finalizing','Failed'];
+
+            function animateFinish(ts) {
+                const t = Math.min(1, (ts - start) / duration);
+                const eased = from + (to - from) * (1 - Math.cos(t * Math.PI / 2));
+                processingState.percent = eased;
+                if (audioProgressBar) audioProgressBar.style.width = processingState.percent.toFixed(1) + '%';
+                if (audioProgressPercent) audioProgressPercent.textContent = Math.round(processingState.percent) + '%';
+                if (t < 1) {
+                    requestAnimationFrame(animateFinish);
+                } else {
+                    // small delay so users see completion
+                    setTimeout(() => {
+                        // hide and reset
+                        processingState.active = false;
+                        if (audioProgressWrap) audioProgressWrap.classList.add('hidden');
+                        if (audioProgressBar) audioProgressBar.style.width = '0%';
+                        if (audioProgressPercent) audioProgressPercent.textContent = '0%';
+                        // clear step highlights
+                        setStepHighlight(-1);
+                    }, 420);
                 }
             }
-            if (audioProgressPercent) audioProgressPercent.textContent = Math.round(Math.max(0, Math.min(100, percent))) + '%';
+            requestAnimationFrame(animateFinish);
+        }
+
+        function setAudioProgress(percent, title, status, indeterminate) {
+            // Backwards-compatible: if called directly, update target to reflect percent
+            if (!audioProgressWrap) return;
+            audioProgressWrap.classList.remove('hidden');
+            if (!processingState.active) startProcessingUI();
+            processingState.target = Math.max(processingState.target || 0, Math.min(98, percent));
             if (audioProgressTitle && title) audioProgressTitle.textContent = title;
             if (audioProgressStatus && status) audioProgressStatus.textContent = status;
+            if (indeterminate && audioProgressBar) audioProgressBar.classList.add('opacity-80');
+            else if (audioProgressBar) audioProgressBar.classList.remove('opacity-80');
         }
 
         function hideAudioProgress() {
+            // trigger finish animation and hide
+            finishProcessingUI(true);
             if (progressTimer) {
                 clearInterval(progressTimer);
                 progressTimer = null;
             }
-            if (audioProgressWrap) audioProgressWrap.classList.add('hidden');
-            if (audioProgressBar) {
-                audioProgressBar.classList.remove('animate-pulse');
-                audioProgressBar.style.width = '0%';
-            }
-            if (audioProgressPercent) audioProgressPercent.textContent = '0%';
         }
 
         function submitAudioWithProgress(form) {
@@ -339,6 +440,8 @@
             let uploadProgress = 0;
             let analysisProgress = 0;
 
+            // start the staged processing UI
+            startProcessingUI();
             setAudioProgress(2, 'Uploading audio', 'Sending file to the server...', false);
 
             xhr.upload.onprogress = (event) => {
@@ -353,15 +456,19 @@
             xhr.onreadystatechange = () => {
                 if (xhr.readyState === XMLHttpRequest.DONE) {
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        hideAudioProgress();
-                        document.open();
-                        document.write(xhr.responseText);
-                        document.close();
+                        // finish UI smoothly and then navigate/replace content
+                        finishProcessingUI(true);
+                        setTimeout(() => {
+                            document.open();
+                            document.write(xhr.responseText);
+                            document.close();
+                        }, 600);
                     } else {
                         if (progressTimer) {
                             clearInterval(progressTimer);
                             progressTimer = null;
                         }
+                        finishProcessingUI(false);
                         setAudioProgress(100, 'Analysis failed', 'Please try again.', false);
                     }
                 }
@@ -373,11 +480,12 @@
 
             if (progressTimer) clearInterval(progressTimer);
             progressTimer = setInterval(() => {
-                if (uploadProgress < 75) return;
-                analysisProgress = Math.min(98, analysisProgress + 2);
-                const shown = Math.max(uploadProgress, analysisProgress);
-                setAudioProgress(shown, 'Analyzing audio', 'Detecting mood and ranking songs...', true);
-            }, 220);
+                // nudge the visual target toward completion while waiting for server
+                if (uploadProgress < 70) return;
+                // slowly increase target so renderProgress eases toward it
+                processingState.target = Math.min(95, (processingState.target || 50) + 1.5);
+                setAudioProgress(processingState.target, 'Analyzing audio', 'Detecting mood and ranking songs...', true);
+            }, 250);
         }
 
         function toPixelLandmarks(landmarks) {
